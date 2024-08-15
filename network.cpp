@@ -29,9 +29,7 @@ void networkSetup(){
 }
 
 void networkUpdate(){
-  if (output_buffer_cnt != 0){
-    
-
+  if (output_buffer_cnt > 250){ // Reduce network traffic by sending larger buffers at the time
     /*
     NB!!! The current SPI library for R4 wifi does not support usingInterrupt() for some reason? 
     Dirty solution is to disable the interrupts manually whenever SPI will be used... 
