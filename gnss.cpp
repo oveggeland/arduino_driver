@@ -45,7 +45,6 @@ void gnssSetup(){
   myGNSS.addCfgValset(UBLOX_CFG_TP_PULSE_DEF, 0); // Tell the module that we want to set the period (not the frequency). PERIOD = 0. FREQ = 1.
   myGNSS.addCfgValset(UBLOX_CFG_TP_PULSE_LENGTH_DEF, 1); // Tell the module to set the pulse length (not the pulse ratio / duty). RATIO = 0. LENGTH = 1.
   myGNSS.addCfgValset(UBLOX_CFG_TP_POL_TP1, 0); // Tell the module that we want the falling edge at the top of second. Falling Edge = 0. Rising Edge = 1.
-  myGNSS.addCfgValset(UBLOX_CFG_TP_ALIGN_TO_TOW_TP1, 1); // Align signal to top of second
 
   // Now set the time pulse parameters
   if (myGNSS.sendCfgValset() == false)
@@ -72,7 +71,7 @@ void gnssUpdate(){
     // Calculate arduino time for gnss acquisition
     uint32_t usecs;
     uint32_t secs = myGNSS.getUnixEpoch(usecs);
-    myGnssPkg.ts = ts_pps_arduino + usecs + 1e6*(secs - ts_pps_gnss);
+    myGnssPkg.ts = ts_pps_arduino + usecs + 1e6*(int32_t)(secs - ts_pps_gnss);
 
     // Retrieve position
     myGnssPkg.latitude = myGNSS.getLatitude();

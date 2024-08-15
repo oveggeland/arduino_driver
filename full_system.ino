@@ -6,7 +6,7 @@
 
 #define WATCHDOG_INTERVAL 3000 // Milliseconds (This should be bigger than the amount of time it takes to initialize all modules)
 
-#define HEARTBEAT_INTERVAL 1000
+#define HEARTBEAT_INTERVAL 5000
 uint32_t ts_heartbeat = 0;
 
 void heartbeat(){
