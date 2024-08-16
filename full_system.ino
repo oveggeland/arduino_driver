@@ -6,7 +6,7 @@
 
 #define WATCHDOG_INTERVAL 3000 // Milliseconds (This should be bigger than the amount of time it takes to initialize all modules)
 
-#define HEARTBEAT_INTERVAL 5000
+#define HEARTBEAT_INTERVAL 1000
 uint8_t hearbeat_msg[3] = {'$', 'H', 'B'};
 uint32_t ts_heartbeat = 0;
 
@@ -34,12 +34,15 @@ void setup() {
   NETWORK MUST BE SETUP BEFORE IMU. THIS IS BECAUSE IMU INTERRUPTS MIGHT AFFECT THE SETUP ROUTINE
   */
   networkSetup();
+  WDT.refresh();
 
   // GNSS setup
   gnssSetup();
+  WDT.refresh();
 
   // Imu stuff
   imuSetup();
+  WDT.refresh();
 }
 
 
