@@ -66,7 +66,7 @@ void setSampleRate(float sr){
 void drdyISR(void) {
   isr_data_obj.ts = micros(); // Set timestamp immediately
   burstRead(isr_data_obj.rate, isr_data_obj.acc); // Instantly read out the data
-
+  
   myDataBuffer.pushOverwrite((imuData) isr_data_obj);
 }
 
@@ -84,9 +84,7 @@ void imuSetup(){
   pinMode(IMU_DR_PIN, INPUT); // Set RST pin to be an output
   pinMode(IMU_DR_PIN, INPUT_PULLDOWN);                                    // Using a pullup b/c ICM-20948 Breakout board has an onboard pullup as well and we don't want them to compete
   
-  int val = digitalPinToInterrupt(IMU_DR_PIN);
-  attachInterrupt(val, drdyISR, RISING);
-  SPI.usingInterrupt(val);
+  attachInterrupt(digitalPinToInterrupt(IMU_DR_PIN), drdyISR, RISING);
 }
 
 void imuReset(){

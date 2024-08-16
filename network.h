@@ -9,6 +9,8 @@
 #define OUTPUT_BUFFER_SIZE 1024
 #define SD_CARD_PIN 4
 
+#define UDP_MIN_PAYLOAD_SIZE 250
+
 /**
 * The three standard functionalities every module should have. 
 * 1. Setup on power-up
