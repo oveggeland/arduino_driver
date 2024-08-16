@@ -11,9 +11,10 @@ sock.bind((UDP_IP, UDP_PORT))
 
 IMU_HEADER = "$IMU"
 GNSS_HEADER = "$GNSS"
+HB_HEADER = "$HB"
 
 IMU_STRUCT_SIZE = 32 
-GNSS_STRUCT_SIZE = 28
+GNSS_STRUCT_SIZE = 21
 
 
 def parse_imu(data):
@@ -22,7 +23,7 @@ def parse_imu(data):
 
 def parse_gnss_data(data):
     ts, lat, lng, alt = struct.unpack("@Iiii", data[len(GNSS_HEADER):])
-    print(f"{ts} - Alt: {lat}, Lng: {lng}, Alt: {alt}")
+    print(f"{ts} - Lat: {lat}, Lng: {lng}, Alt: {alt}")
 
 while True:
     data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes, should be more than enough
@@ -37,8 +38,12 @@ while True:
             data = data[IMU_STRUCT_SIZE:]
 
         elif data[:len(GNSS_HEADER)] == bytes(GNSS_HEADER, 'utf-8'):
-            #parse_gnss_data(data[:GNSS_STRUCT_SIZE])
+            parse_gnss_data(data[:GNSS_STRUCT_SIZE])
             data = data[GNSS_STRUCT_SIZE:]
+
+        elif data[:len(HB_HEADER)] == bytes(HB_HEADER, 'utf-8'):
+            print("HEARTBEAT!")
+            data = data[len(HB_HEADER):]
 
         else: # Some unknown header, move on
             data = data[1:]

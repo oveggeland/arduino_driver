@@ -13,9 +13,9 @@
 typedef struct {
   char header[5] = {'$', 'G', 'N', 'S', 'S'};
   uint32_t ts;
-  float latitude;
-  float longitude;
-  float altitude;
+  int32_t latitude;
+  int32_t longitude;
+  int32_t altitude;
 } gnssPackage;
 
 /**
