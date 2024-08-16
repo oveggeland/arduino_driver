@@ -8,3 +8,10 @@ The Ethernet Shield 2 is also used to send all received data to a host computer.
 
 
 NB!!!!! To make this work properly, you need to overwrite the legacy SPI library. Add this folder: https://github.com/oveggeland/arduino_r4_spi to the libraries directory for your arduino IDE. 
+
+
+Arduino library dependecies:
+- (NTPClient) https://www.arduino.cc/reference/en/libraries/ntpclient/
+- (SparkFun u-blox GNSS v3) https://www.arduino.cc/reference/en/libraries/sparkfun-u-blox-gnss-v3/
+- (RingBuffer) https://www.arduino.cc/reference/en/libraries/ringbuffer/ 
+- (SPI custom) https://github.com/oveggeland/arduino_r4_spi
