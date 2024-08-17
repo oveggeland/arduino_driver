@@ -27,7 +27,7 @@ def parse_imu(data):
     rate_y *= 0.02
     rate_z *= 0.02
     
-    print(f"{t_sec}.{t_usec:06d} - Acc: [{acc_x:.2f}, {acc_y:.2f}, {acc_z:.2f}], Rate: [{rate_x:.2f}, {rate_y:.2f}, {rate_z:.2f}]")
+    print(f"{t_sec}.{t_usec:06d} - Acc: [{acc_x:+09.2f}, {acc_y:+09.2f}, {acc_z:+09.2f}], Rate: [{rate_x:+07.2f}, {rate_y:+07.2f}, {rate_z:+07.2f}]")
 
 def parse_gnss_data(data):
     t_sec, t_usec, lat, lng, alt = struct.unpack("@IIiii", data[len(GNSS_HEADER):])
