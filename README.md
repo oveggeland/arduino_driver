@@ -13,5 +13,4 @@ NB!!!!! To make this work properly, you need to overwrite the legacy SPI library
 Arduino library dependecies:
 - (NTPClient) https://www.arduino.cc/reference/en/libraries/ntpclient/
 - (SparkFun u-blox GNSS v3) https://www.arduino.cc/reference/en/libraries/sparkfun-u-blox-gnss-v3/
-- (RingBuffer) https://www.arduino.cc/reference/en/libraries/ringbuffer/ 
 - (SPI custom) https://github.com/oveggeland/arduino_r4_spi

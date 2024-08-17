@@ -13,12 +13,20 @@ IMU_HEADER = "$IMU"
 GNSS_HEADER = "$GNSS"
 HB_HEADER = "$HB"
 
-IMU_STRUCT_SIZE = 36 
+IMU_STRUCT_SIZE = 24
 GNSS_STRUCT_SIZE = 25
 
 
 def parse_imu(data):
-    t_sec, t_usec, acc_x, acc_y, acc_z, rate_x, rate_y, rate_z = struct.unpack("@IIffffff", data[len(IMU_HEADER):])
+    t_sec, t_usec, acc_x, acc_y, acc_z, rate_x, rate_y, rate_z = struct.unpack("@IIhhhhhh", data[len(IMU_HEADER):])
+    acc_x *= 0.8
+    acc_y *= 0.8
+    acc_z *= 0.8
+
+    rate_x *= 0.02
+    rate_y *= 0.02
+    rate_z *= 0.02
+    
     print(f"{t_sec}.{t_usec:06d} - Acc: [{acc_x:.2f}, {acc_y:.2f}, {acc_z:.2f}], Rate: [{rate_x:.2f}, {rate_y:.2f}, {rate_z:.2f}]")
 
 def parse_gnss_data(data):
@@ -34,15 +42,15 @@ while True:
         
         # Check for IMU Header
         if data[:len(IMU_HEADER)] == bytes(IMU_HEADER, 'utf-8'):
-            #parse_imu(data[:IMU_STRUCT_SIZE])
+            parse_imu(data[:IMU_STRUCT_SIZE])
             data = data[IMU_STRUCT_SIZE:]
 
         elif data[:len(GNSS_HEADER)] == bytes(GNSS_HEADER, 'utf-8'):
-            parse_gnss_data(data[:GNSS_STRUCT_SIZE])
+            #parse_gnss_data(data[:GNSS_STRUCT_SIZE])
             data = data[GNSS_STRUCT_SIZE:]
 
         elif data[:len(HB_HEADER)] == bytes(HB_HEADER, 'utf-8'):
-            print("HEARTBEAT!")
+            #print("HEARTBEAT!")
             data = data[len(HB_HEADER):]
 
         else: # Some unknown header, move on

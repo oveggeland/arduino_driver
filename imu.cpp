@@ -1,8 +1,5 @@
 #include "imu.h"
 
-imuData isr_data_obj;
-RingBuf<imuData, 32> myDataBuffer; // Ringbuffer (FIFO) to store IMU measurements from ISR
-
 uint16_t readReg(uint16_t addr){
   SPI.beginTransaction(IMU_SPI_SETTINGS);  
   digitalWrite(IMU_CS_PIN, LOW); // Chip select
@@ -64,15 +61,17 @@ void setSampleRate(float sr){
 }
 
 void drdyISR(void) {
-  getCurrentTime(isr_data_obj.t_sec, isr_data_obj.t_usec); // Get time stamp
-  burstRead(isr_data_obj.rate, isr_data_obj.acc); // Instantly read out the data
+  imuPackage pkg;
+  getCurrentTime(pkg.t_sec, pkg.t_usec); // Get time stamp
+  burstRead(pkg.rate, pkg.acc); // Instantly read out the data
   
-  myDataBuffer.pushOverwrite((imuData) isr_data_obj);
+  networkPushData((uint8_t*) &pkg, sizeof(pkg));
 }
 
 void imuSetup(){
   Serial.println("IMU setup");
-  SPI.begin(); // This is also called in Ethernet.h, but no worries about that
+
+  SPI.begin(); // This is also called by Ethernet.h, but no worries about that. Safer to do both
 
   // Setup pins
   pinMode(IMU_CS_PIN, OUTPUT); // Set CS pin to be an output
@@ -111,7 +110,7 @@ void imuReset(){
     Serial.println("flash test passed");
 
   // Set sample rate
-  setSampleRate(200); 
+  setSampleRate(IMU_SAMPLE_RATE); 
 
   // Measurements should be in body frame
   uint16_t reg = readReg(EKF_CNFG);
@@ -122,21 +121,5 @@ void imuReset(){
 Iterate through ringbuffer of imu data (pushed by ISR). Construct IMU network packages and push to network buffer for later transmition. 
 */
 void imuUpdate(){
-  imuData data_obj;
-  imuPackage data_pkg;
-  // TODO: This seems like an extra step. Why not directly push the data onto Network buffer from ISR? No need for ringbuffer and stuff. Also move interpretation of bytes to host side. 
-  while (myDataBuffer.lockedPop(data_obj)){
-    data_pkg.t_sec = data_obj.t_sec;
-    data_pkg.t_usec = data_obj.t_usec;
-
-    data_pkg.rate[0] = 0.02* data_obj.rate[0];
-    data_pkg.rate[1] = 0.02* data_obj.rate[1];
-    data_pkg.rate[2] = 0.02* data_obj.rate[2];
-
-    data_pkg.acc[0] = 0.8* data_obj.acc[0];
-    data_pkg.acc[1] = 0.8* data_obj.acc[1];
-    data_pkg.acc[2] = 0.8* data_obj.acc[2];    
-
-    networkPushData((uint8_t*) &data_pkg, sizeof(data_pkg)); // After we push to network buffer, the data is out of our hands. Note that this does not guarantee a delivery to host. 
-  }
+  // Maybe do some checks? Data handling is performed in ISR. 
 }

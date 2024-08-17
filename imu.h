@@ -5,7 +5,6 @@
 
 // Imported libs
 #include <ICM_20948.h>
-#include <RingBuf.h>
 
 // Code imports
 #include "ADIS16480.h"
@@ -16,21 +15,15 @@
 #define IMU_DR_PIN 2
 
 #define IMU_SPI_SETTINGS SPISettings(14000000, MSBFIRST, SPI_MODE3)
-
-typedef struct{
-  uint32_t t_sec;
-  uint32_t t_usec;
-  int16_t rate[3];
-  int16_t acc[3];
-} imuData; // Struct to keep data from ADIS (used in interrupts)
+#define IMU_SAMPLE_RATE 200
 
 #pragma pack(1)
 typedef struct {
   char header[4] = {'$', 'I', 'M', 'U'};
   uint32_t t_sec;
   uint32_t t_usec;
-  float acc[3];
-  float rate[3];
+  int16_t acc[3];
+  int16_t rate[3];
 } imuPackage;
 
 void imuSetup();

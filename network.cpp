@@ -74,18 +74,19 @@ void networkSetup(){
 
 
 void sendData(){
-  if (output_buffer_cnt > UDP_MIN_PAYLOAD_SIZE){
+  uint32_t bytesToWrite = output_buffer_cnt;
+  if (bytesToWrite > UDP_MIN_PAYLOAD_SIZE){
     if (!Udp.beginPacket(remoteIP, remotePort)){
       Serial.println("UDP begin packet failed");
     };
     
-    size_t bytesWritten = Udp.write(output_buffer, output_buffer_cnt);
-    if (bytesWritten != output_buffer_cnt){
+    size_t bytesWritten = Udp.write(output_buffer, bytesToWrite);
+    if (bytesWritten != bytesToWrite){
       Serial.println("UDP write failed");
       Serial.print("Bytes written is: ");
       Serial.println(bytesWritten);
-      Serial.print("Buffer count was: ");
-      Serial.println(output_buffer_cnt);
+      Serial.print("Bytes to write was: ");
+      Serial.println(bytesToWrite);
     };
     if (!Udp.endPacket()){
       Serial.println("UDP endpacket failed");
