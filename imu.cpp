@@ -1,5 +1,10 @@
 #include "imu.h"
 
+// Status/Diagnostics variables
+imuStatus g_imu_status;
+uint32_t imu_t_diag = 0;
+
+
 uint16_t readReg(uint16_t addr){
   SPI.beginTransaction(IMU_SPI_SETTINGS);  
   digitalWrite(IMU_CS_PIN, LOW); // Chip select
@@ -56,15 +61,17 @@ void burstRead(volatile int16_t* rate, volatile int16_t* acc){
 }
 
 void setSampleRate(float sr){
-  uint16_t dec_rate_value = round((2460 / sr) - 1);
-  writeReg(DEC_RATE, dec_rate_value);
+  writeReg(DEC_RATE, round(2460 / sr) - 1);
+}
+
+float getSampleRate(){
+  return 2460.0 / (readReg(DEC_RATE) + 1);
 }
 
 void drdyISR(void) {
   imuPackage pkg;
-  getCurrentTime(pkg.t_sec, pkg.t_usec); // Get time stamp
-  burstRead(pkg.rate, pkg.acc); // Instantly read out the data
-  
+  getCurrentTime(pkg.t_sec, pkg.t_usec);
+  burstRead(pkg.rate, pkg.acc);
   networkPushData((uint8_t*) &pkg, sizeof(pkg));
 }
 
@@ -95,19 +102,9 @@ void imuReset(){
   writeReg(GLOB_CMD, 1 << 1); // Self test (Takes 12ms according to datasheet)
   delay(12);
 
-  if (readReg(DIAG_STS))
-    Serial.print("Self test failed...");
-  else
-    Serial.println("Self test passed");
-  
   // Flash test
   writeReg(GLOB_CMD, 1 << 2); // Flash memory test (Takes 53ms according to datasheet)
   delay(53);
-  uint16_t error_flag = readReg(SYS_E_FLAG);
-  if (readReg(SYS_E_FLAG) & (1 << 6))
-    Serial.println("flash test failed...");
-  else
-    Serial.println("flash test passed");
 
   // Set sample rate
   setSampleRate(IMU_SAMPLE_RATE); 
@@ -115,11 +112,29 @@ void imuReset(){
   // Measurements should be in body frame
   uint16_t reg = readReg(EKF_CNFG);
   writeReg(EKF_CNFG, reg | (1 << 3));
+
+  imuDiag();
 }
 
-/*
-Iterate through ringbuffer of imu data (pushed by ISR). Construct IMU network packages and push to network buffer for later transmition. 
-*/
+void imuDiag(){
+  g_imu_status.diag_status = readReg(DIAG_STS);
+  if (g_imu_status.diag_status)
+    Serial.print("IMU: Diag error");
+
+  g_imu_status.error_flag = readReg(SYS_E_FLAG);
+  if (g_imu_status.error_flag & ~(0b11 << 8)){
+    Serial.print("IMU: Error flag is ");
+    Serial.println(g_imu_status.error_flag);
+  }
+
+  g_imu_status.sr = (uint8_t) getSampleRate();
+
+  imu_t_diag = millis();
+}
+
+// Called frequently from the main program
 void imuUpdate(){
-  // Maybe do some checks? Data handling is performed in ISR. 
+  // Run occasional diagnostics
+  if (millis() - imu_t_diag > IMU_DIAG_INTERVAL)
+    imuDiag();
 }

@@ -69,7 +69,7 @@ if __name__ == "__main__":
     imu_pub = rospy.Publisher('imu', Imu, queue_size=100)
     gnss_pub = rospy.Publisher('gnss', NavSatFix, queue_size=10)
 
-    while True:
+    while not rospy.is_shutdown():
         data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes, should be more than enough
 
         idx = data.find(b'$') # '$' is the header sign, this is placed at the beginning of each package
@@ -97,5 +97,3 @@ if __name__ == "__main__":
                 data = data[1:]
 
             idx = data.find(b'$')
-
-
