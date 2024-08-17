@@ -1,6 +1,7 @@
 #include "imu.h"
 #include "gnss.h"
 #include "network.h"
+#include "sync.h"
 
 #include <WDT.h>
 
@@ -36,6 +37,10 @@ void setup() {
   networkSetup();
   WDT.refresh();
 
+  // NTP
+  ntpSetup();
+  WDT.refresh();
+
   // GNSS setup
   gnssSetup();
   WDT.refresh();
@@ -47,11 +52,13 @@ void setup() {
 
 
 void loop() {
-  // put your main code here, to run repeatedly:
   imuUpdate();
+
   gnssUpdate();
 
   networkUpdate();
+
+  ntpUpdate();
 
   heartbeat();
   WDT.refresh();
