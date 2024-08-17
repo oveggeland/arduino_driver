@@ -13,6 +13,7 @@ uint32_t t0_ntp_usec;
 
 // Last sync time
 uint32_t t_sync = 0;
+bool ntp_synced = false;
 
 
 uint32_t byteArrayToUint32(uint8_t* arr){
@@ -42,7 +43,7 @@ void sendNTPpacket() {
 }
 
 
-void doSync(){
+bool doSync(){
 // Example version
   sendNTPpacket(); // send an NTP packet to a time server
 
@@ -81,7 +82,11 @@ void doSync(){
       t0_ntp_sec = t1_sec;
       t0_ntp_usec = t1_usec - delay;
     }
+
+    return true;
   }
+
+  return false;
 }
 
 
@@ -96,19 +101,23 @@ void ntpSetup() {
   ntpReq.ref_id = (word(myMac[0], myMac[1]) << 16) | word(myMac[4], myMac[5]); // ID to recognize correct response from server (Construct this from unique MAC)
 
   // Primary sync
-  doSync();
+  if (doSync())
+    ntp_synced = true;
 }
 
 
 void ntpUpdate() {
-  if (millis() - t_sync > NTP_INTERVAL){
-    doSync();
-    t_sync = millis();
+  if (millis() - t_sync > NTP_INTERVAL || !ntp_synced){
+    if(doSync()){
+      Serial.println("NTP sync complete");
+      t_sync = millis();
+      ntp_synced = true;
+    }
+    else{
+      Serial.println("NTP sync failed");
+      ntp_synced = false;
+    }
   }
-  // uint32_t sec, usec;
-  // getCurrentTime(sec, usec);
-  // printTime(sec, usec, true);
-  // Serial.println();
 }
 
 void getCurrentTime(uint32_t &sec, uint32_t &usec){

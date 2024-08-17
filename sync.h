@@ -13,7 +13,7 @@ NTP and PTP configurations
 #define NTP_SERVER_IP IPAddress(192,168,1,56)
 #define NTP_CLIENT_PORT 1023
 
-#define NTP_INTERVAL 60 
+#define NTP_INTERVAL 60000 // Every 60 seconds
 
 typedef struct{
   uint8_t sec[4];
