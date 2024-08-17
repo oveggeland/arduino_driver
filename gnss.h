@@ -2,7 +2,9 @@
 
 #include <Wire.h>
 #include <SparkFun_u-blox_GNSS_v3.h>
+
 #include "network.h"
+#include "sync.h"
 
 #define WIRE_PORT Wire1
 #define GNSS_PPS_PIN 3
@@ -12,7 +14,8 @@
 #pragma pack(1)
 typedef struct {
   char header[5] = {'$', 'G', 'N', 'S', 'S'};
-  uint32_t ts;
+  uint32_t t_sec;
+  uint32_t t_usec;
   int32_t latitude;
   int32_t longitude;
   int32_t altitude;

@@ -2,15 +2,16 @@
 
 SFE_UBLOX_GNSS myGNSS;
 
-uint32_t ts_pps_arduino; // Local microsecond clock
-uint32_t ts_pps_gnss;    // GNSS timers (UNIX seconds, when PPS signal was sent)
+uint32_t t_pps_sec;
+uint32_t t_pps_usec;
+uint32_t pps_gnss_sec; // GNSS second of PPS signal
 bool pps_fix;
 
 gnssPackage myGnssPkg; // Data struct for formating network messages
 
 
 void gnssISR(void) {
-  ts_pps_arduino = micros(); // Capture local time at pps event
+  getCurrentTime(t_pps_sec, t_pps_usec);// Capture local time at pps event
   pps_fix = false;
 }
 
@@ -64,14 +65,22 @@ If this is not the case, measurements will be missed and time sync might be corr
 void gnssUpdate(){
   if (myGNSS.getPVT(1) == true){
     if (!pps_fix){ // We assume that the first GNSS message we receive is less than 0.5s away from the pps signal (very reasonable as the PPS interrupt is much faster than reading the data solution over i2c)
-      ts_pps_gnss = myGNSS.getUnixEpoch(); // Get second when timestamp was registered
+      pps_gnss_sec = myGNSS.getUnixEpoch(); // Get second when timestamp was registered
       pps_fix = true;
     }
 
-    // Calculate arduino time for gnss acquisition
-    uint32_t usecs;
-    uint32_t secs = myGNSS.getUnixEpoch(usecs);
-    myGnssPkg.ts = ts_pps_arduino + usecs + 1e6*(int32_t)(secs - ts_pps_gnss);
+    // Get measurement gnss time
+    uint32_t m_usec;
+    uint32_t m_sec = myGNSS.getUnixEpoch(m_usec);
+
+    // Offset from pps time (in micros)
+    int32_t pps_offset_us = getTimeDiff(pps_gnss_sec, 0, m_sec, m_usec); // Time since/before pps in microseconds
+
+    // Timestamp microseconds (in arduino time)
+    int32_t ts_usec = (int32_t)t_pps_usec + pps_offset_us; // This could be negative or more than 1e6, so this should be adjusted for
+
+    myGnssPkg.t_sec = t_pps_sec + (ts_usec / 1.0e6); // Timestamp, adjust seconds if microsecond overflow
+    myGnssPkg.t_usec = ts_usec + 1e6*(int32_t)(t_pps_sec - myGnssPkg.t_sec); // Timestamp, adjust microsecond according to how many seconds we adjusted in previous line
 
     // Retrieve position
     myGnssPkg.latitude = myGNSS.getLatitude();

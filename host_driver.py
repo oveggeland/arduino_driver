@@ -13,17 +13,17 @@ IMU_HEADER = "$IMU"
 GNSS_HEADER = "$GNSS"
 HB_HEADER = "$HB"
 
-IMU_STRUCT_SIZE = 32 
-GNSS_STRUCT_SIZE = 21
+IMU_STRUCT_SIZE = 36 
+GNSS_STRUCT_SIZE = 25
 
 
 def parse_imu(data):
-    ts, acc_x, acc_y, acc_z, rate_x, rate_y, rate_z = struct.unpack("@Iffffff", data[len(IMU_HEADER):])
-    print(f"{ts} - Acc: [{acc_x:.2f}, {acc_y:.2f}, {acc_z:.2f}], Rate: [{rate_x:.2f}, {rate_y:.2f}, {rate_z:.2f}]")
+    t_sec, t_usec, acc_x, acc_y, acc_z, rate_x, rate_y, rate_z = struct.unpack("@IIffffff", data[len(IMU_HEADER):])
+    print(f"{t_sec}.{t_usec:06d} - Acc: [{acc_x:.2f}, {acc_y:.2f}, {acc_z:.2f}], Rate: [{rate_x:.2f}, {rate_y:.2f}, {rate_z:.2f}]")
 
 def parse_gnss_data(data):
-    ts, lat, lng, alt = struct.unpack("@Iiii", data[len(GNSS_HEADER):])
-    print(f"{ts} - Lat: {lat}, Lng: {lng}, Alt: {alt}")
+    t_sec, t_usec, lat, lng, alt = struct.unpack("@IIiii", data[len(GNSS_HEADER):])
+    print(f"{t_sec}.{t_usec:06d} - Lat: {lat}, Lng: {lng}, Alt: {alt}")
 
 while True:
     data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes, should be more than enough

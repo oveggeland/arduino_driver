@@ -64,7 +64,7 @@ void setSampleRate(float sr){
 }
 
 void drdyISR(void) {
-  isr_data_obj.ts = micros(); // Set timestamp immediately
+  getCurrentTime(isr_data_obj.t_sec, isr_data_obj.t_usec); // Get time stamp
   burstRead(isr_data_obj.rate, isr_data_obj.acc); // Instantly read out the data
   
   myDataBuffer.pushOverwrite((imuData) isr_data_obj);
@@ -124,8 +124,10 @@ Iterate through ringbuffer of imu data (pushed by ISR). Construct IMU network pa
 void imuUpdate(){
   imuData data_obj;
   imuPackage data_pkg;
+  // TODO: This seems like an extra step. Why not directly push the data onto Network buffer from ISR? No need for ringbuffer and stuff. Also move interpretation of bytes to host side. 
   while (myDataBuffer.lockedPop(data_obj)){
-    data_pkg.ts = data_obj.ts;
+    data_pkg.t_sec = data_obj.t_sec;
+    data_pkg.t_usec = data_obj.t_usec;
 
     data_pkg.rate[0] = 0.02* data_obj.rate[0];
     data_pkg.rate[1] = 0.02* data_obj.rate[1];
