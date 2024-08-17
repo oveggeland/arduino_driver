@@ -39,6 +39,6 @@ void ntpSetup();
 void ntpReset();
 void ntpUpdate();
 
-void getCurrentTime(uint32_t &sec, uint32_t &usec);
+bool getCurrentTime(uint32_t &sec, uint32_t &usec);
 void printTime(uint32_t sec, uint32_t usec);
 int32_t getTimeDiff(uint32_t t0_sec, uint32_t t0_usec, uint32_t t1_sec, uint32_t t1_usec);

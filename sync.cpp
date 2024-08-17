@@ -4,12 +4,10 @@ ntp_payload ntpReq;
 EthernetUDP ntpUDP;
 
 // Local time for send and receive (Stamped by local clock on transmit and receive of NTP messages)
-uint32_t t0_local;
-uint32_t t3_local;
+uint32_t t0_local, t3_local
 
 // NTP time for sending (to be calculated based on NTP response)
-uint32_t t0_ntp_sec;
-uint32_t t0_ntp_usec;
+uint32_t t0_ntp_sec, t0_ntp_usec;
 
 // Last sync time
 uint32_t t_sync = 0;
@@ -120,18 +118,27 @@ void ntpUpdate() {
   }
 }
 
-void getCurrentTime(uint32_t &sec, uint32_t &usec){
-  noInterrupts(); // No interrupts should be allowed while setting timestamps
-  uint32_t t_local = micros();
 
+/*
+Fills sec and usec with synchronized values from NTP. Returns false if system clock is not synchronized
+*/
+bool getCurrentTime(uint32_t &sec, uint32_t &usec){
+  noInterrupts();
+  
+  usec = t0_ntp_usec + (micros() - t0_local);
   sec = t0_ntp_sec;
-  usec = t0_ntp_usec + (t_local - t0_local);
 
   uint32_t seconds_passed = usec / 1e6;
 
   usec -= seconds_passed*1e6;
   sec += seconds_passed;
   interrupts();
+
+  // Return status of NTP sync
+  if (!ntp_synced){ 
+    return false;
+  }
+  return true;
 }
 
 void printTime(uint32_t sec, uint32_t usec){
