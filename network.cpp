@@ -1,87 +1,57 @@
 #include "network.h"
 
-uint32_t ts_maintain = 0;
-
-byte mac[] = {
-  0xA8, 0x61, 0x0A, 0xAF, 0x01, 0xC0
-};// A8610AAF01C0 (from board)
-
-IPAddress staticIp(192, 168, 1, 177); // Default if DHCP not available
-uint32_t localPort = 8888;      // local port to listen on
-
-IPAddress remoteIP(192, 168, 1, 56);
-uint32_t remotePort = 5005;      // local port to listen on
 
 EthernetUDP Udp;
 
 uint8_t output_buffer[OUTPUT_BUFFER_SIZE];
-uint16_t output_buffer_cnt;
+volatile uint16_t output_buffer_cnt;
 
-int maintain(){
-  int ret_val = Ethernet.maintain(); // This takes about 15ms! 
-
-  switch (ret_val) {
+void maintain(){
+  switch (Ethernet.maintain()) {
     case 1:
-      //renewed fail
       Serial.println("Error: renewed fail");
       break;
-
     case 2:
-      //renewed success
-      Serial.println("Renewed success");
-      //print your local IP address:
-      Serial.print("My IP address: ");
-      Serial.println(Ethernet.localIP());
       break;
-
     case 3:
-      //rebind fail
       Serial.println("Error: rebind fail");
       break;
-
     case 4:
-      //rebind success
-      Serial.println("Rebind success");
-      //print your local IP address:
-      Serial.print("My IP address: ");
-      Serial.println(Ethernet.localIP());
       break;
-
     default:
       break;
   }
-
-  return ret_val;
 }
 
 void networkSetup(){
   Serial.println("Network setup");
 
   // Start ethernet and UDP
-  if (Ethernet.begin(mac, 2000) == 0){
-    if (maintain() & 0b1){
-      Serial.println("DHCP connection failed, using static IP");
-      Ethernet.begin(mac, staticIp);
-    };
+  byte mac[] = MAC_ADDRESS;
+  if (Ethernet.begin(mac, 1000, 200) == 0){
+    Serial.println("DHCP connection failed, initializing with static IP");
+    Ethernet.begin(mac, DEFAULT_IP);
+  }
+  
+  if (!Udp.begin(LOCAL_PORT)){
+    Serial.print("Failed to start UDP socket on port: ");
+    Serial.println(LOCAL_PORT);
   };
-
-  Udp.begin(localPort);
     
   // Disable SD card (to be safe)
   pinMode(SD_CARD_PIN, OUTPUT); 
   digitalWrite(SD_CARD_PIN, HIGH);
 }
 
-
 bool sendData(){
   uint32_t bytesToWrite = output_buffer_cnt;
   if (bytesToWrite > UDP_MIN_PAYLOAD_SIZE){
-    if (!Udp.beginPacket(remoteIP, remotePort)){
+    if (!Udp.beginPacket(REMOTE_IP, REMOTE_PORT)){
       Serial.println("UDP begin packet failed");
       return false;
     };
     
-    size_t bytesWritten = Udp.write(output_buffer, bytesToWrite);
+    uint32_t bytesWritten = Udp.write(output_buffer, bytesToWrite);
     if (bytesWritten != bytesToWrite){
       Serial.println("UDP write failed");
       Serial.print("Bytes written is: ");
@@ -97,31 +67,29 @@ bool sendData(){
 
     output_buffer_cnt -= bytesWritten; // Buffer reset
   }
+  return true;
 }
 
 void networkUpdate(){
-  /*
-  1. Maintain connections (DHCP, get destination IP, etc.)
-  2. Send data on output buffer
-  3. Parse incoming messages
-  */ 
-  if (millis() - ts_maintain > 1000){
-    maintain();
-    ts_maintain = millis();
-  }
+  maintain();
 
-  sendData();
+  uint8_t tries = 0;
+  while (tries++ < 5 && !sendData()){
+    Serial.println("Trying again");
+  }
 }
 
-
 bool networkPushData(uint8_t* src_buffer, uint16_t size){
-  if (size > OUTPUT_BUFFER_SIZE - output_buffer_cnt){
-    return false;
+  bool retval = false;
+  
+  noInterrupts();
+  if (size <= OUTPUT_BUFFER_SIZE - output_buffer_cnt){
+    // Copy data to output buffer, add to the buffer count
+    memcpy(output_buffer + output_buffer_cnt, src_buffer, size);
+    output_buffer_cnt += size;
+    retval = true;
   }
+  interrupts();
 
-  // Copy data to output buffer, add to the buffer count
-  memcpy(output_buffer + output_buffer_cnt, src_buffer, size);
-  output_buffer_cnt += size;
-
-  return true;
+  return retval;
 };

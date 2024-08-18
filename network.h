@@ -11,6 +11,15 @@
 
 #define UDP_MIN_PAYLOAD_SIZE 250
 
+#define MAC_ADDRESS {0xA8, 0x61, 0x0A, 0xAF, 0x01, 0xC0}
+#define DEFAULT_IP IPAddress(192, 168, 1, 177)
+#define LOCAL_PORT 8888
+
+#define REMOTE_IP IPAddress(192, 168, 1, 56)
+#define REMOTE_PORT 5005
+
+#define DHCP_MAINTAIN_INTERVAL 500 // Milliseconds
+
 /**
 * The three standard functionalities every module should have. 
 * 1. Setup on power-up
