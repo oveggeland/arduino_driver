@@ -14,7 +14,6 @@ sock.bind((UDP_IP, UDP_PORT))
 
 IMU_HEADER = "$IMU"
 GNSS_HEADER = "$GNSS"
-HB_HEADER = "$HB"
 
 IMU_STRUCT_SIZE = 24
 GNSS_STRUCT_SIZE = 25
@@ -66,7 +65,7 @@ def parse_gnss_data(data, verbose=False):
 if __name__ == "__main__":
     rospy.init_node("test_node")
 
-    imu_pub = rospy.Publisher('imu', Imu, queue_size=100)
+    imu_pub = rospy.Publisher('imu', Imu, queue_size=1000)
     gnss_pub = rospy.Publisher('gnss', NavSatFix, queue_size=10)
 
     while not rospy.is_shutdown():
@@ -88,10 +87,6 @@ if __name__ == "__main__":
                 gnss_pub.publish(gnss_msg)
 
                 data = data[GNSS_STRUCT_SIZE:]
-
-            elif data[:len(HB_HEADER)] == bytes(HB_HEADER, 'utf-8'):
-                #print("HEARTBEAT!")
-                data = data[len(HB_HEADER):]
 
             else: # Some unknown header, move on
                 data = data[1:]
