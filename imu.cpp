@@ -38,22 +38,32 @@ void writeReg(uint16_t addr, uint16_t data){
 }
 
 /*
-SPI is not efficient with single read calls, this does not use the full duplex possibilities.
-This function performs a burst read of all gyro + acc data in a much more efficient manner.
+Read all accleration and gyroscope measurements
 */
-void burstRead(volatile int16_t* rate, volatile int16_t* acc){
+void burstRead(uint16_t* rate, uint16_t* acc){
   SPI.beginTransaction(IMU_SPI_SETTINGS); 
   digitalWrite(IMU_CS_PIN, LOW);
 
   SPI.transfer16(0x8000); // Assert page 0
 
-  SPI.transfer16(X_GYRO_OUT << 8); // Read command gyro_x
-  rate[0] = SPI.transfer16(Y_GYRO_OUT << 8); // Retrieve gyro_x and read command gyro_y (Samne pattern underneath)
-  rate[1] = SPI.transfer16(Z_GYRO_OUT << 8); 
-  rate[2] = SPI.transfer16(X_ACCL_OUT << 8);
-  acc[0] = SPI.transfer16(Y_ACCL_OUT << 8);
-  acc[1] = SPI.transfer16(Z_ACCL_OUT << 8);
-  acc[2] = SPI.transfer16(SPI_NOP); // No command, but we need to read out the last acc data
+  // Send read command, followed by dummy bytes (SPI_NOP) to retrieve data from IMU data registers
+  SPI.transfer16(X_GYRO_OUT << 8);
+  rate[0] = SPI.transfer16(SPI_NOP);
+
+  SPI.transfer16(Y_GYRO_OUT << 8);
+  rate[1] = SPI.transfer16(SPI_NOP);
+
+  SPI.transfer16(Z_GYRO_OUT << 8);
+  rate[2] = SPI.transfer16(SPI_NOP);
+
+  SPI.transfer16(X_ACCL_OUT << 8);
+  acc[0] = SPI.transfer16(SPI_NOP);
+
+  SPI.transfer16(Y_ACCL_OUT << 8);
+  acc[1] = SPI.transfer16(SPI_NOP);
+
+  SPI.transfer16(Z_ACCL_OUT << 8);
+  acc[2] = SPI.transfer16(SPI_NOP);
 
   // End transaction
   digitalWrite(IMU_CS_PIN, HIGH); // Chip select
@@ -71,7 +81,7 @@ float getSampleRate(){
 void drdyISR(void) {
   imuPackage pkg;
   getCurrentTime(pkg.t_sec, pkg.t_usec);
-  burstRead(pkg.rate, pkg.acc);
+  burstRead((uint16_t*) pkg.rate, (uint16_t*) pkg.acc);
   networkPushData((uint8_t*) &pkg, sizeof(pkg));
 }
 

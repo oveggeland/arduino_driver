@@ -116,7 +116,6 @@ void networkUpdate(){
 
 bool networkPushData(uint8_t* src_buffer, uint16_t size){
   if (size > OUTPUT_BUFFER_SIZE - output_buffer_cnt){
-    Serial.println("Not enough space on output buffer");
     return false;
   }
 
