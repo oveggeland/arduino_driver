@@ -3,15 +3,15 @@
 ntp_payload ntpReq;
 EthernetUDP ntpUDP;
 
-// Local time for send and receive (Stamped by local clock on transmit and receive of NTP messages)
-uint32_t t0_local, t3_local;
+// Global references for estimating timestamps
+uint32_t t_ref_local, t_ref_sec, t_ref_usec;
 
-// NTP time for sending (to be calculated based on NTP response)
-uint32_t t0_ntp_sec, t0_ntp_usec;
-
-// Last sync time
-uint32_t t_sync = 0;
+// Sync flag
 bool ntp_synced = false;
+
+// Arduino clock drift factor
+float drift_factor = 1.0;
+bool drift_converge = false;
 
 
 uint32_t byteArrayToUint32(uint8_t* arr){
@@ -32,26 +32,35 @@ int32_t getTimeDiff(uint32_t t0_sec, uint32_t t0_usec, uint32_t t1_sec, uint32_t
 
 
 // send an NTP request to the time server at the given address
-void sendNTPpacket() {
-  ntpUDP.beginPacket(NTP_SERVER_IP, NTP_SERVER_PORT); // NTP requests are to port 123
-  ntpUDP.write((uint8_t*) &ntpReq, sizeof(ntpReq));
+bool sendNTPRequest(uint32_t &ts) {
+  if (!ntpUDP.beginPacket(NTP_SERVER_IP, NTP_SERVER_PORT))
+    return false;
 
-  ntpUDP.endPacket();
-  t0_local = micros();
+  size_t bytesWritten = ntpUDP.write((uint8_t*) &ntpReq, sizeof(ntpReq));
+  if (bytesWritten != sizeof(ntpReq))
+    return false;
+
+  if (!ntpUDP.endPacket())
+    return false;
+
+  ts = micros(); // Save timestamp of transmittion
+
+  return true;
 }
 
 
 bool doSync(){
-// Example version
-  sendNTPpacket(); // send an NTP packet to a time server
+  // Keep track of transmittion time (in local arduino counter time)
+  uint32_t t0_local, t3_local;
+  if (!sendNTPRequest(t0_local))
+    return false;
 
-  // Wait for response (timeout at 10 milliseconds)
-  uint32_t t0 = millis();
+  // Wait for socket to receive response
   int bytesAvailable;
   do{
-    t3_local = micros();
     bytesAvailable = ntpUDP.parsePacket();
-  } while ((bytesAvailable == 0) && (millis() - t0 < 10)); // Keep trying as long as we have not bytes or timeout is not raised
+    t3_local = micros(); // Time of reception
+  } while ((bytesAvailable == 0) && (micros() - t0_local < NTP_TIMEOUT));
 
   // Read package
   if (bytesAvailable == sizeof(ntpReq)){
@@ -63,23 +72,44 @@ bool doSync(){
     // TODO: Make some nice assertions for micros() overflow counting (this happens every 70 minutes)
 
     // 1. Calculate one-way delay (in microseconds)    
-    uint32_t t1_sec = getSec(ntpResp.ts_rec);
-    uint32_t t1_usec = getUsec(ntpResp.ts_rec);
+    uint32_t t1_ntp_sec = getSec(ntpResp.ts_rec);
+    uint32_t t1_ntp_usec = getUsec(ntpResp.ts_rec);
 
-    uint32_t t2_sec = getSec(ntpResp.ts_trans);
-    uint32_t t2_usec = getUsec(ntpResp.ts_trans);
+    uint32_t t2_ntp_sec = getSec(ntpResp.ts_trans);
+    uint32_t t2_ntp_usec = getUsec(ntpResp.ts_trans);
 
-    uint32_t delay = ((t3_local - t0_local) - getTimeDiff(t1_sec, t1_usec, t2_sec, t2_usec)) / 2; // Microsecond delay
+    uint32_t delay = ((t3_local - t0_local) - getTimeDiff(t1_ntp_sec, t1_ntp_usec, t2_ntp_sec, t2_ntp_usec)) / 2; // Microsecond delay (one-way)
 
-    
-    if (delay > t1_usec){
-      t0_ntp_sec = t1_sec - 1;
-      t0_ntp_usec = t1_usec - delay + 1e6;
+    uint32_t t0_ntp_sec, t0_ntp_usec;
+    if (delay > t1_ntp_usec){
+      t0_ntp_sec = t1_ntp_sec - 1;
+      t0_ntp_usec = t1_ntp_usec - delay + 1e6;
     }
     else{
-      t0_ntp_sec = t1_sec;
-      t0_ntp_usec = t1_usec - delay;
+      t0_ntp_sec = t1_ntp_sec;
+      t0_ntp_usec = t1_ntp_usec - delay;
     }
+
+    // Adjust scale factor
+    if (ntp_synced){
+      uint32_t dt_ntp = getTimeDiff(t_ref_sec, t_ref_usec, t0_ntp_sec, t0_ntp_usec);
+
+      float new_drift_factor = (float)dt_ntp / (t0_local - t_ref_local);
+
+      if (abs(drift_factor - new_drift_factor) < NTP_DRIFT_CONVERGENCE_ATOL)
+        drift_converge = true;
+      else
+        drift_converge = false; // Diverging drift? Weird
+
+      drift_factor = new_drift_factor;
+    }
+    
+    // Update reference values used to get timestamps (Time critical that all are changed at the same time)
+    noInterrupts();
+    t_ref_sec = t0_ntp_sec;
+    t_ref_usec = t0_ntp_usec;
+    t_ref_local = t0_local;
+    interrupts();
 
     return true;
   }
@@ -99,16 +129,18 @@ void ntpSetup() {
   ntpReq.ref_id = (word(myMac[0], myMac[1]) << 16) | word(myMac[4], myMac[5]); // ID to recognize correct response from server (Construct this from unique MAC)
 
   // Primary sync
-  if (doSync())
-    ntp_synced = true;
+  ntp_synced = doSync();
 }
 
 
 void ntpUpdate() {
-  if (millis() - t_sync > NTP_INTERVAL || !ntp_synced){
+  uint32_t interval = NTP_INTERVAL;
+  if (!drift_converge)
+    interval = 1e6;
+
+  if (micros() - t_ref_local > interval || !ntp_synced){
     if(doSync()){
       Serial.println("NTP sync complete");
-      t_sync = millis();
       ntp_synced = true;
     }
     else{
@@ -124,9 +156,9 @@ Fills sec and usec with synchronized values from NTP. Returns false if system cl
 */
 bool getCurrentTime(uint32_t &sec, uint32_t &usec){
   noInterrupts();
-  
-  usec = t0_ntp_usec + (micros() - t0_local);
-  sec = t0_ntp_sec;
+
+  usec = t_ref_usec + drift_factor*(micros() - t_ref_local);
+  sec = t_ref_sec;
 
   uint32_t seconds_passed = usec / 1e6;
 

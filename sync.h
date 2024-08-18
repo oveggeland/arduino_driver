@@ -13,7 +13,9 @@ NTP and PTP configurations
 #define NTP_SERVER_IP IPAddress(192,168,1,56)
 #define NTP_CLIENT_PORT 1023
 
-#define NTP_INTERVAL 60000 // Every 60 seconds
+#define NTP_INTERVAL 10e6 // Microseconds
+#define NTP_TIMEOUT 10e3 // Microseconds
+#define NTP_DRIFT_CONVERGENCE_ATOL 0.001 // Convergence toler
 
 typedef struct{
   uint8_t sec[4];
