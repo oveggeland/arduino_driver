@@ -6,8 +6,7 @@ NTP and PTP configurations
 
 #include <stdint.h>
 
-#include <Ethernet.h>
-#include <EthernetUdp.h>
+#include "network.h"
 
 #define NTP_SERVER_PORT 123
 #define NTP_SERVER_IP IPAddress(192,168,1,56)
@@ -16,6 +15,11 @@ NTP and PTP configurations
 #define NTP_INTERVAL 10e6 // Microseconds
 #define NTP_TIMEOUT 10e3 // Microseconds
 #define NTP_DRIFT_CONVERGENCE_ATOL 0.001 // Convergence toler
+
+#define DEFAULT_DRIFT_FACTOR 1.003
+
+uint32_t getMicros();
+uint32_t getMillis();
 
 typedef struct{
   uint8_t sec[4];

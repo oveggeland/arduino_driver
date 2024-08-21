@@ -9,7 +9,7 @@
 #define OUTPUT_BUFFER_SIZE 1024
 #define SD_CARD_PIN 4
 
-#define UDP_MIN_PAYLOAD_SIZE 250
+#define UDP_MIN_PAYLOAD_SIZE 256
 
 #define MAC_ADDRESS {0xA8, 0x61, 0x0A, 0xAF, 0x01, 0xC0}
 #define DEFAULT_IP IPAddress(192, 168, 1, 177)

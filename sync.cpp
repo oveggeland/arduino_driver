@@ -10,9 +10,17 @@ uint32_t t_ref_local, t_ref_sec, t_ref_usec;
 bool ntp_synced = false;
 
 // Arduino clock drift factor
-float drift_factor = 1.0;
+float drift_factor = DEFAULT_DRIFT_FACTOR;
 bool drift_converge = false;
 
+
+uint32_t getMicros(){
+  return drift_factor*micros();
+}
+
+uint32_t getMillis(){
+  return drift_factor*millis();
+}
 
 uint32_t byteArrayToUint32(uint8_t* arr){
   return (arr[0] << 24) | (arr[1] << 16) | (arr[2] << 8) | (arr[3] << 0);

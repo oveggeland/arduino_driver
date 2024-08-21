@@ -2,6 +2,7 @@
 #include "gnss.h"
 #include "network.h"
 #include "sync.h"
+#include "ptp.h"
 
 #define HEARTBEAT_INTERVAL 2000
 uint32_t ts_heartbeat = 0;
@@ -24,6 +25,8 @@ void setup() {
 
   ntpSetup();
 
+  ptpSetup();
+
   gnssSetup();
 
   imuSetup();
@@ -31,13 +34,15 @@ void setup() {
 
 
 void loop() {
-  imuUpdate();
-
-  gnssUpdate();
-
   networkUpdate();
 
   ntpUpdate();
+
+  ptpUpdate();
+
+  gnssUpdate();
+
+  imuUpdate();
 
   heartbeat();
 }
