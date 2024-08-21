@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <Arduino.h>
 
-#define OUTPUT_BUFFER_SIZE 1024
+#define OUTPUT_BUFFER_SIZE 1472 // MTU for Ethernet shield is 1500, subtract (ipv4 and udp headers to get 1472 as maximum buffer size)
 #define SD_CARD_PIN 4
 
 #define UDP_MIN_PAYLOAD_SIZE 256
@@ -18,17 +18,10 @@
 #define REMOTE_IP IPAddress(192, 168, 1, 56)
 #define REMOTE_PORT 5005
 
-#define DHCP_MAINTAIN_INTERVAL 500 // Milliseconds
-
-/**
-* The three standard functionalities every module should have. 
-* 1. Setup on power-up
-* 2. Reset for error-handling
-* 3. Update is called in the main loop to perform relevant tasks
-*/
 void networkSetup();
-void networkReset();
 void networkUpdate();
 
+bool sendUdpMsg(EthernetUDP *pcb, IPAddress dst_ip, int dst_port, uint8_t *buffer, uint16_t size); 
+
 // Used to push data to the output buffer (E.g. gnss or imu using this to send data to host computer)
-bool networkPushData(uint8_t* src_buffer, uint16_t size);
+void networkPushData(uint8_t* src_buffer, uint16_t size);

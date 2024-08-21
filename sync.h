@@ -14,19 +14,24 @@ NTP and PTP configurations
 
 #define NTP_INTERVAL 10e6 // Microseconds
 #define NTP_TIMEOUT 10e3 // Microseconds
-#define NTP_DRIFT_CONVERGENCE_ATOL 0.001 // Convergence toler
+#define NTP_DRIFT_ATOL 0.1 // Tolerance for drift deviation (away from 1.0 corresponding to no drift)
+
+#define NTP_OFFSET 2208988800
 
 #define DEFAULT_DRIFT_FACTOR 1.003
 
-uint32_t getMicros();
-uint32_t getMillis();
+// This struct defines the system wide time
+typedef struct{
+  uint32_t sec;
+  uint32_t usec;
+} timeval;
 
+#pragma pack(1) // So struct can be send straight to UDP (no alignment bytes)
 typedef struct{
   uint8_t sec[4];
   uint8_t frac[4];
 } ntp_ts;
 
-#pragma pack(1) // So struct can be send straight to UDP (no alignment bytes)
 typedef struct{
   uint8_t flags;
   uint8_t stratum;
@@ -45,6 +50,12 @@ void ntpSetup();
 void ntpReset();
 void ntpUpdate();
 
-bool getCurrentTime(uint32_t &sec, uint32_t &usec);
+void getCurrentTime(uint32_t &sec, uint32_t &usec);
+void getCurrentTime(timeval &t);
+timeval getCurrentTime();
+
 void printTime(uint32_t sec, uint32_t usec);
+void printTime(timeval t);
+
 int32_t getTimeDiff(uint32_t t0_sec, uint32_t t0_usec, uint32_t t1_sec, uint32_t t1_usec);
+int32_t getTimeDiff(timeval t0, timeval t1);

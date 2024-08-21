@@ -9,22 +9,6 @@ struct ptp_followup followup_msg = { 0 };
 struct ptp_delayresp delayresp_msg = { 0 };
 
 
-bool sendUdpMsg(EthernetUDP *pcb, IPAddress dst_ip, int dst_port, uint8_t *buffer, uint16_t size) {
-  if (!pcb->beginPacket(dst_ip, dst_port)) {
-    return false;
-  };
-
-  uint32_t bytesWritten = pcb->write(buffer, size);
-  if (bytesWritten != size) {
-    return false;
-  };
-  if (!pcb->endPacket()) {
-    return false;
-  }
-
-  return true;
-}
-
 void initHeaders() {
   // Common header
   struct ptp_header common_header = { 0 };
@@ -87,17 +71,18 @@ void ptpSetup() {
   initHeaders();
 }
 
+void setTimestampBytes(uint8_t* p_ts_dst, timeval ts){
+  uint32_t nsec = 1e3*ts.usec;
+  memcpy_reverse_endian(&p_ts_dst[2], (uint8_t *)&ts.sec, 4);
+  memcpy_reverse_endian(&p_ts_dst[6], (uint8_t *)&nsec, 4);
+}
+
 bool announce(uint16_t seq) {
   // Set seq
   memset_reverse_endian(announce_msg.header.seq_id, seq, 2);
 
   // Set time stamp
-  uint32_t ts = getMicros();
-  uint32_t HIGH = ts / 1e6;
-  uint32_t LOW = 1e3 * (ts - HIGH * 1e6);
-
-  memcpy_reverse_endian(&announce_msg.timestamp[2], (uint8_t *)&HIGH, 4);
-  memcpy_reverse_endian(&announce_msg.timestamp[6], (uint8_t *)&LOW, 4);
+  setTimestampBytes(announce_msg.timestamp, getCurrentTime());
 
   // Set random stuff based on what I see on ptpd library packages
   announce_msg.gmPriority1 = 128;
@@ -113,62 +98,52 @@ bool announce(uint16_t seq) {
   return sendUdpMsg(&ptp_pcb_general, PTP_IP, PTP_GENERAL_PORT, (uint8_t *)&announce_msg, sizeof(announce_msg));
 }
 
-uint32_t sync(uint16_t seq) {
+bool sendSyncMsg(uint16_t seq, timeval &t1) {
   memset_reverse_endian((uint8_t *)&sync_msg.header.seq_id, seq, 2);
 
-  uint32_t ts = getMicros();
-  uint32_t HIGH = ts / 1e6;
-  uint32_t LOW = 1e3 * (ts - HIGH * 1e6);
-  memcpy_reverse_endian(&sync_msg.timestamp[2], (uint8_t *)&HIGH, 4);
-  memcpy_reverse_endian(&sync_msg.timestamp[6], (uint8_t *)&LOW, 4);
+  setTimestampBytes(sync_msg.timestamp, getCurrentTime());
 
   if (sendUdpMsg(&ptp_pcb_event, PTP_IP, PTP_EVENT_PORT, (uint8_t *)&sync_msg, sizeof(sync_msg))){
-    return getMicros();
+    getCurrentTime(t1);
+    return true;
   }
-  return 0;
+  return false;
 }
 
-bool followup(uint16_t seq, uint32_t ts) {
+bool sendFollowupMsg(uint16_t seq, timeval t1) {
   memset_reverse_endian((uint8_t *)&followup_msg.header.seq_id, seq, 2);
 
-  uint32_t HIGH = ts / 1e6;
-  uint32_t LOW = 1e3 * (ts - HIGH * 1e6);
-  memcpy_reverse_endian(&followup_msg.timestamp[2], (uint8_t *)&HIGH, 4);
-  memcpy_reverse_endian(&followup_msg.timestamp[6], (uint8_t *)&LOW, 4);
+  setTimestampBytes(followup_msg.timestamp, t1);
 
   return sendUdpMsg(&ptp_pcb_general, PTP_IP, PTP_GENERAL_PORT, (uint8_t *)&followup_msg, sizeof(followup_msg));
 }
 
-bool delayResp(uint32_t ts, struct ptp_delayreq ptpReq) {
+bool sendDelayRespMsg(timeval t3_ptp, struct ptp_delayreq ptpReq) {
   memcpy(delayresp_msg.header.seq_id, ptpReq.header.seq_id, 2);
   memcpy(delayresp_msg.req_port_id, ptpReq.header.clock_id, 10);
 
-  uint32_t HIGH = ts / 1e6;
-  uint32_t LOW = 1e3 * (ts - HIGH * 1e6);
-  memcpy_reverse_endian(&delayresp_msg.timestamp[2], (uint8_t *)&HIGH, 4);
-  memcpy_reverse_endian(&delayresp_msg.timestamp[6], (uint8_t *)&LOW, 4);
+  setTimestampBytes(delayresp_msg.timestamp, t3_ptp);
 
   return sendUdpMsg(&ptp_pcb_general, PTP_IP, PTP_GENERAL_PORT, (uint8_t *)&delayresp_msg, sizeof(delayresp_msg));
 }
 
 bool delayRespond(uint32_t timeout) {
-  uint32_t t0 = getMillis();
+  uint32_t t_start = millis();
 
   do {
     int bytesAvailable = ptp_pcb_event.parsePacket();
-    uint32_t ts_recv = getMicros();  // Time of reception
+    timeval t3_ptp = getCurrentTime();
 
     if (bytesAvailable == sizeof(struct ptp_delayreq)) {
       struct ptp_delayreq ptpReq;
       ptp_pcb_event.read((uint8_t *)&ptpReq, sizeof(ptpReq));  // read the packet into the buffer
 
-      if(!delayResp(ts_recv, ptpReq)){
+      if(!sendDelayRespMsg(t3_ptp, ptpReq)){
         Serial.println("Delay response failed");
         return false;
       }
-      Serial.println("Responded");
     }
-  } while ((getMillis() - t0 < timeout));
+  } while ((millis() - t_start < timeout));
 
   return true;
 }
@@ -176,18 +151,17 @@ bool delayRespond(uint32_t timeout) {
 uint16_t seq = 0;
 uint32_t t_sync = 0;
 void ptpUpdate() {
-  if (getMillis() - t_sync > PTP_SYNC_INTERVAL){
+  if (millis() - t_sync > PTP_SYNC_INTERVAL){
     announce(seq);
 
-    uint32_t ts = sync(seq);
-    if (ts != 0) {
-      //delay(5);
-      if (followup(seq, ts)) {
+    timeval t1_ptp;
+    if (sendSyncMsg(seq, t1_ptp)) {
+      if (sendFollowupMsg(seq, t1_ptp)) {
         delayRespond(200);
       }
       seq++;
     }
 
-    t_sync = getMillis();
+    t_sync = millis();
   }
 }

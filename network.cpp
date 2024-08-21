@@ -1,27 +1,11 @@
 #include "network.h"
 
 
-EthernetUDP Udp;
+EthernetUDP network_pcb_output;
 
 uint8_t output_buffer[OUTPUT_BUFFER_SIZE];
 volatile uint16_t output_buffer_cnt;
 
-void maintain(){
-  switch (Ethernet.maintain()) {
-    case 1:
-      Serial.println("Error: renewed fail");
-      break;
-    case 2:
-      break;
-    case 3:
-      Serial.println("Error: rebind fail");
-      break;
-    case 4:
-      break;
-    default:
-      break;
-  }
-}
 
 void networkSetup(){
   Serial.println("Network setup");
@@ -33,7 +17,7 @@ void networkSetup(){
     Ethernet.begin(mac, DEFAULT_IP);
   }
   
-  if (!Udp.begin(LOCAL_PORT)){
+  if (!network_pcb_output.begin(LOCAL_PORT)){
     Serial.print("Failed to start UDP socket on port: ");
     Serial.println(LOCAL_PORT);
   };
@@ -46,50 +30,49 @@ void networkSetup(){
 bool sendData(){
   uint32_t bytesToWrite = output_buffer_cnt;
   if (bytesToWrite > UDP_MIN_PAYLOAD_SIZE){
-    if (!Udp.beginPacket(REMOTE_IP, REMOTE_PORT)){
-      Serial.println("UDP begin packet failed");
+    if (!sendUdpMsg(&network_pcb_output, REMOTE_IP, REMOTE_PORT, output_buffer, output_buffer_cnt))
       return false;
-    };
     
-    uint32_t bytesWritten = Udp.write(output_buffer, bytesToWrite);
-    if (bytesWritten != bytesToWrite){
-      Serial.println("UDP write failed");
-      Serial.print("Bytes written is: ");
-      Serial.println(bytesWritten);
-      Serial.print("Bytes to write was: ");
-      Serial.println(bytesToWrite);
-      return false;
-    };
-    if (!Udp.endPacket()){
-      Serial.println("UDP endpacket failed");
-      return false;
-    }
-
-    output_buffer_cnt -= bytesWritten; // Buffer reset
+    output_buffer_cnt -= bytesToWrite; // Buffer reset
   }
   return true;
 }
 
 void networkUpdate(){
-  maintain();
+  Ethernet.maintain();
 
-  uint8_t tries = 0;
-  while (tries++ < 5 && !sendData()){
-    Serial.println("Trying again");
+  if (!sendData()){
+    Serial.println("Network update: Failed to send data...");
   }
 }
 
-bool networkPushData(uint8_t* src_buffer, uint16_t size){
-  bool retval = false;
-  
+
+void networkPushData(uint8_t* src_buffer, uint16_t size){
   noInterrupts();
   if (size <= OUTPUT_BUFFER_SIZE - output_buffer_cnt){
-    // Copy data to output buffer, add to the buffer count
     memcpy(output_buffer + output_buffer_cnt, src_buffer, size);
     output_buffer_cnt += size;
-    retval = true;
   }
   interrupts();
-
-  return retval;
 };
+
+
+bool sendUdpMsg(EthernetUDP *pcb, IPAddress dst_ip, int dst_port, uint8_t *buffer, uint16_t size) {
+  // Begin packet
+  if (!pcb->beginPacket(dst_ip, dst_port)) {
+    return false;
+  };
+
+  // Write bytes
+  uint32_t bytesWritten = pcb->write(buffer, size);
+  if (bytesWritten != size) {
+    return false;
+  };
+
+  // Send packet
+  if (!pcb->endPacket()) {
+    return false;
+  }
+
+  return true;
+}
