@@ -19,9 +19,12 @@ IMU_STRUCT_SIZE = 24
 GNSS_STRUCT_SIZE = 25
 
 
-
 def parse_imu_data(data, verbose=False):
+    if len(data) != IMU_STRUCT_SIZE:
+        print("IMU struct length error...")
+    
     t_sec, t_usec, acc_x, acc_y, acc_z, rate_x, rate_y, rate_z = struct.unpack("@IIhhhhhh", data[len(IMU_HEADER):])
+
     acc_x *= 0.8
     acc_y *= 0.8
     acc_z *= 0.8
@@ -48,6 +51,9 @@ def parse_imu_data(data, verbose=False):
 
 
 def parse_gnss_data(data, verbose=False):
+    if len(data) != GNSS_STRUCT_SIZE:
+        print("IMU struct length error...")
+
     t_sec, t_usec, lat, lng, alt = struct.unpack("@IIiii", data[len(GNSS_HEADER):])
     if verbose:
         print(f"{t_sec}.{t_usec:06d} - Lat: {lat}, Lng: {lng}, Alt: {alt}")
@@ -69,7 +75,7 @@ if __name__ == "__main__":
     gnss_pub = rospy.Publisher('gnss', NavSatFix, queue_size=10)
 
     while not rospy.is_shutdown():
-        data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes, should be more than enough
+        data, addr = sock.recvfrom(2048) 
 
         idx = data.find(b'$') # '$' is the header sign, this is placed at the beginning of each package
         while idx != -1:

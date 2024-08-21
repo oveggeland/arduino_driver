@@ -157,7 +157,9 @@ void ptpUpdate() {
     timeval t1_ptp;
     if (sendSyncMsg(seq, t1_ptp)) {
       if (sendFollowupMsg(seq, t1_ptp)) {
-        delayRespond(200);
+        if (delayRespond(200)){
+          Serial.println("PTP sync finished succesfully");
+        }
       }
       seq++;
     }
