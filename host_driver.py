@@ -18,7 +18,7 @@ STATUS_HEADER = "$ST"
 
 IMU_STRUCT_SIZE = 24
 GNSS_STRUCT_SIZE = 25
-STATUS_STRUCT_SIZE = 28
+STATUS_STRUCT_SIZE = 32
 
 
 def parse_imu_data(data, verbose=False):
@@ -74,9 +74,10 @@ def parse_status_data(data, verbose=False):
     if len(data) != STATUS_STRUCT_SIZE:
         print("Status struct length error...")
 
-    t_sec, t_usec, age, ntp_interval, ntp_offset, ptp_active, ptp_interval = struct.unpack("=IIIIi?I", data[len(STATUS_HEADER):])
+    t_sec, t_usec, age, ntp_interval, ntp_offset, ptp_active, ptp_interval, imu_active, imu_sr, gnss_active, gnss_sr = struct.unpack("=IIIIi?I?B?B", data[len(STATUS_HEADER):])
     if verbose:
         print(f"{t_sec}.{t_usec:06d} - Age: {age}, T_NTP: {ntp_interval}, NTP_OFFSET: {ntp_offset:+6d}, T_PTP: {ptp_interval}")
+        print(f"{t_sec}.{t_usec:06d} - Imu active: {imu_active}, Imu sample rate: {imu_sr}, GNSS active: {gnss_active}, GNSS sample rate: {gnss_sr}")
     
     return True
 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
                 data = data[IMU_STRUCT_SIZE:]
 
             elif data[:len(GNSS_HEADER)] == bytes(GNSS_HEADER, 'utf-8'):
-                gnss_msg = parse_gnss_data(data[:GNSS_STRUCT_SIZE], verbose=False)
+                gnss_msg = parse_gnss_data(data[:GNSS_STRUCT_SIZE], verbose=True)
                 gnss_pub.publish(gnss_msg)
 
                 data = data[GNSS_STRUCT_SIZE:]

@@ -17,6 +17,12 @@ void statusUpdate(){
   st.ptp_active = ptpIsActive();
   st.ptp_interval = ptpGetInterval();
 
+  st.imu_active = imuIsActive();
+  st.imu_sr = imuGetSampleRate();
+
+  st.gnss_active = gnssIsActive();
+  st.gnss_sr = gnssGetSampleRate();
+
   networkPushData((uint8_t*) &st, sizeof(st));
   Serial.print("Sending status struct of size: ");
   Serial.println(sizeof(st));

@@ -7,6 +7,8 @@ uint32_t t_pps_usec;
 uint32_t pps_gnss_sec; // GNSS second of PPS signal
 bool pps_fix;
 
+bool gnss_active_ = true;
+
 gnssPackage myGnssPkg; // Data struct for formating network messages
 
 
@@ -51,7 +53,7 @@ void gnssSetup(){
   if (myGNSS.sendCfgValset() == false)
     Serial.println(F("VALSET failed!"));
   
-  myGNSS.setNavigationFrequency(GNSS_FREQUENCY);
+  myGNSS.setNavigationFrequency(GNSS_DEFAULT_SAMPLE_RATE);
 
   // Setup a interrupt at for PPS monitoring
   pinMode(GNSS_PPS_PIN, INPUT_PULLUP);
@@ -63,6 +65,9 @@ This is assumed to be called at least once for each GNSS measurement.
 If this is not the case, measurements will be missed and time sync might be corrupted. 
 */
 void gnssUpdate(){
+  if (!gnss_active_)
+    return;
+
   if (myGNSS.getPVT(1) == true){
     if (!pps_fix){ // We assume that the first GNSS message we receive is less than 0.5s away from the pps signal (very reasonable as the PPS interrupt is much faster than reading the data solution over i2c)
       pps_gnss_sec = myGNSS.getUnixEpoch(); // Get second when timestamp was registered
@@ -89,4 +94,20 @@ void gnssUpdate(){
 
     networkPushData((uint8_t*) &myGnssPkg, sizeof(myGnssPkg)); // Push print buffer (used for debugging)
   }
+}
+
+bool gnssIsActive(){
+  return gnss_active_;
+}
+
+void gnssActive(bool set){
+  gnss_active_ = set;
+}
+
+uint8_t gnssGetSampleRate(){
+  myGNSS.getNavigationFrequency();
+}
+
+void gnssSetSampleRate(uint8_t sr){
+  myGNSS.setNavigationFrequency(sr);
 }

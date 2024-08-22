@@ -1,9 +1,10 @@
 #include "imu.h"
 
 // Status/Diagnostics variables
-imuStatus g_imu_status;
 uint32_t imu_t_diag = 0;
 
+bool imu_active_ = true;
+bool imu_error_flag_ = false;
 
 uint16_t readReg(uint16_t addr){
   SPI.beginTransaction(IMU_SPI_SETTINGS);  
@@ -70,11 +71,11 @@ void burstRead(uint16_t* rate, uint16_t* acc){
   SPI.endTransaction();
 }
 
-void setSampleRate(float sr){
+void imuSetSampleRate(uint8_t sr){
   writeReg(DEC_RATE, round(2460 / sr) - 1);
 }
 
-float getSampleRate(){
+uint8_t imuGetSampleRate(){
   return 2460.0 / (readReg(DEC_RATE) + 1);
 }
 
@@ -117,7 +118,7 @@ void imuReset(){
   delay(53);
 
   // Set sample rate
-  setSampleRate(IMU_SAMPLE_RATE); 
+  imuSetSampleRate(IMU_DEFAULT_SAMPLE_RATE); 
 
   // Measurements should be in body frame
   uint16_t reg = readReg(EKF_CNFG);
@@ -127,24 +128,35 @@ void imuReset(){
 }
 
 void imuDiag(){
-  g_imu_status.diag_status = readReg(DIAG_STS);
-  if (g_imu_status.diag_status)
+  if (readReg(DIAG_STS)){
     Serial.print("IMU: Diag error");
-
-  g_imu_status.error_flag = readReg(SYS_E_FLAG);
-  if (g_imu_status.error_flag & ~(0b11 << 8)){
-    Serial.print("IMU: Error flag is ");
-    Serial.println(g_imu_status.error_flag);
+    imu_error_flag_ = true;
   }
-
-  g_imu_status.sr = (uint8_t) getSampleRate();
+  else if (readReg(SYS_E_FLAG) & ~(0b11 << 8)){
+    Serial.println("IMU: SYS ERROR");
+    imu_error_flag_ = true;
+  }
+  else{
+    imu_error_flag_ = false;
+  }
 
   imu_t_diag = millis();
 }
 
 // Called frequently from the main program
 void imuUpdate(){
+  if (!imu_active_)
+    return; 
   // Run occasional diagnostics
   if (millis() - imu_t_diag > IMU_DIAG_INTERVAL)
     imuDiag();
+}
+
+
+bool imuIsActive(){
+  return imu_active_;
+}
+
+void imuActive(bool set){
+  imu_active_ = set;
 }

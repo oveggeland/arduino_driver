@@ -9,7 +9,7 @@
 #define WIRE_PORT Wire1
 #define GNSS_PPS_PIN 3
 
-#define GNSS_FREQUENCY 1
+#define GNSS_DEFAULT_SAMPLE_RATE 1
 
 #pragma pack(1)
 typedef struct {
@@ -30,3 +30,9 @@ typedef struct {
 void gnssSetup(); 
 void gnssReset();
 void gnssUpdate();
+
+bool gnssIsActive();
+void gnssActive(bool set);
+
+uint8_t gnssGetSampleRate();
+void gnssSetSampleRate(uint8_t sr);

@@ -3,6 +3,8 @@
 #include "network.h"
 #include "sync.h"
 #include "ptp.h"
+#include "imu.h"
+#include "gnss.h"
 
 #define STATUS_INTERVAL 500
 
@@ -33,4 +35,11 @@ typedef struct {
   bool ptp_active;
   uint32_t ptp_interval;
 
+  // IMU
+  bool imu_active;
+  uint8_t imu_sr; 
+
+  // GNSS
+  bool gnss_active;
+  uint8_t gnss_sr;
 } arduinoStatus;
