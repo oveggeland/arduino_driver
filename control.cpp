@@ -1,8 +1,7 @@
 #include "control.h"
 
 uint32_t ts_last_update_ = 0;
-
-uint8_t recv_buffer[RECV_BUFFER_SIZE];
+char cmd_header[] = CMD_HEADER; // Used to validate incoming commands
 
 void statusUpdate(){
   arduinoStatus st;
@@ -29,13 +28,41 @@ void statusUpdate(){
   networkSendData();
 }
 
+void resetArduino(){
+  Serial.println("Arduino reset not implemented");
+}
+
+void executeCommand(arduinoCommand cmd){
+  if (cmd.reset){
+    resetArduino();
+  }
+
+  ntpSetInterval(cmd.ntp_interval);
+  
+  ptpActive(cmd.ptp_active);
+  ptpSetInterval(cmd.ptp_interval);
+
+  imuActive(cmd.imu_active);
+  imuSetSampleRate(cmd.imu_sr);
+
+  gnssActive(cmd.gnss_active);
+  gnssSetSampleRate(cmd.gnss_sr);
+}
+
 void parseCommands(){
   // Check recv buffer for commands
-  uint16_t size = networkReadData(recv_buffer, RECV_BUFFER_SIZE);
-
-  if (size > 0){
-    Serial.print("Data received of size: ");
-    Serial.println(size);
+  arduinoCommand cmd;
+  uint16_t bytesRead = networkReadData((uint8_t*) &cmd, sizeof(cmd));
+  if (bytesRead == 0)
+    return;
+  
+  if (bytesRead == sizeof(cmd)){
+    // Correct size, let's check header
+    if (memcmp(cmd_header, cmd.header, sizeof(cmd.header)) == 0){
+      Serial.println("Received a command");
+      
+      executeCommand(cmd);
+    }
   }
 }
 

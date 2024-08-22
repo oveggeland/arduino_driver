@@ -80,6 +80,8 @@ uint8_t imuGetSampleRate(){
 }
 
 void drdyISR(void) {
+  if (!imu_active_)
+    return;
   imuPackage pkg;
   getCurrentTime(pkg.t_sec, pkg.t_usec);
   burstRead((uint16_t*) pkg.rate, (uint16_t*) pkg.acc);
@@ -145,8 +147,6 @@ void imuDiag(){
 
 // Called frequently from the main program
 void imuUpdate(){
-  if (!imu_active_)
-    return; 
   // Run occasional diagnostics
   if (millis() - imu_t_diag > IMU_DIAG_INTERVAL)
     imuDiag();
