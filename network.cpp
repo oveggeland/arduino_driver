@@ -1,7 +1,7 @@
 #include "network.h"
 
 
-EthernetUDP network_pcb_output;
+EthernetUDP network_pcb;
 
 uint8_t output_buffer[OUTPUT_BUFFER_SIZE];
 volatile uint16_t output_buffer_cnt;
@@ -17,7 +17,7 @@ void networkSetup(){
     Ethernet.begin(mac, DEFAULT_IP);
   }
   
-  if (!network_pcb_output.begin(LOCAL_PORT)){
+  if (!network_pcb.begin(LOCAL_PORT)){
     Serial.print("Failed to start UDP socket on port: ");
     Serial.println(LOCAL_PORT);
   };
@@ -30,7 +30,7 @@ void networkSetup(){
 bool networkSendData(){
   uint32_t bytesToWrite = output_buffer_cnt;
   if (bytesToWrite > UDP_MIN_PAYLOAD_SIZE){
-    if (!sendUdpMsg(&network_pcb_output, REMOTE_IP, REMOTE_PORT, output_buffer, output_buffer_cnt))
+    if (!sendUdpMsg(&network_pcb, REMOTE_IP, REMOTE_PORT, output_buffer, output_buffer_cnt))
       return false;
     
     output_buffer_cnt -= bytesToWrite; // Buffer reset
@@ -55,6 +55,20 @@ void networkPushData(uint8_t* src_buffer, uint16_t size){
   }
   interrupts();
 };
+
+uint16_t networkReadData(uint8_t* buffer, uint16_t buffer_size){
+  int bytesAvailable = network_pcb.parsePacket();
+  if (bytesAvailable <= 0){
+    return 0;
+  }
+  else if (bytesAvailable > buffer_size){
+    Serial.println("Can not read data from UDP, buffer size is too small");
+    return 0;
+  }
+
+  // Suitable buffer size and bytes available
+  return network_pcb.read(buffer, bytesAvailable);
+}
 
 
 bool sendUdpMsg(EthernetUDP *pcb, IPAddress dst_ip, int dst_port, uint8_t *buffer, uint16_t size) {

@@ -2,6 +2,8 @@
 
 uint32_t ts_last_update_ = 0;
 
+uint8_t recv_buffer[RECV_BUFFER_SIZE];
+
 void statusUpdate(){
   arduinoStatus st;
 
@@ -24,13 +26,17 @@ void statusUpdate(){
   st.gnss_sr = gnssGetSampleRate();
 
   networkPushData((uint8_t*) &st, sizeof(st));
-  Serial.print("Sending status struct of size: ");
-  Serial.println(sizeof(st));
   networkSendData();
 }
 
 void parseCommands(){
   // Check recv buffer for commands
+  uint16_t size = networkReadData(recv_buffer, RECV_BUFFER_SIZE);
+
+  if (size > 0){
+    Serial.print("Data received of size: ");
+    Serial.println(size);
+  }
 }
 
 void controlUpdate(){

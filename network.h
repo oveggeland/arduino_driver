@@ -28,3 +28,6 @@ void networkPushData(uint8_t* src_buffer, uint16_t size);
 
 // Allows other modules to force network buffer to be sent (If not, this also happens regularly in networkUpdate())
 bool networkSendData();
+
+// Read data from network socket onto buffer, returns number of bytes read
+uint16_t networkReadData(uint8_t* buffer, uint16_t buffer_size);

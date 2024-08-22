@@ -7,6 +7,7 @@
 #include "gnss.h"
 
 #define STATUS_INTERVAL 500
+#define RECV_BUFFER_SIZE 1024
 
 void controlUpdate();
 
