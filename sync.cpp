@@ -10,6 +10,7 @@ timeval t_ref_ntp = {0};
 // Sync flag
 bool ntp_synced = false;
 int32_t ntp_offset_ = 0;
+uint32_t ntp_interval_ = DEFAULT_NTP_INTERVAL;
 
 // Arduino clock drift 
 float drift_factor = DEFAULT_DRIFT_FACTOR;
@@ -136,7 +137,7 @@ void ntpSetup() {
 }
 
 void ntpUpdate() {
-  uint32_t interval = NTP_INTERVAL;
+  uint32_t interval = ntp_interval_;
   if (!drift_converge)
     interval = 1e6;
 
@@ -200,4 +201,16 @@ void printTime(uint32_t sec, uint32_t usec){
 // Pretty print helper for timestamps
 void printTime(timeval t){
   printTime(t.sec, t.usec);
+}
+
+uint32_t ntpGetInterval(){
+  return ntp_interval_;
+}
+
+void ntpSetInterval(uint32_t interval_ms){
+  ntp_interval_ = interval_ms;
+}
+
+int32_t ntpGetOffset(){
+  return ntp_offset_;
 }

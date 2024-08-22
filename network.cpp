@@ -27,7 +27,7 @@ void networkSetup(){
   digitalWrite(SD_CARD_PIN, HIGH);
 }
 
-bool sendData(){
+bool networkSendData(){
   uint32_t bytesToWrite = output_buffer_cnt;
   if (bytesToWrite > UDP_MIN_PAYLOAD_SIZE){
     if (!sendUdpMsg(&network_pcb_output, REMOTE_IP, REMOTE_PORT, output_buffer, output_buffer_cnt))
@@ -41,7 +41,7 @@ bool sendData(){
 void networkUpdate(){
   Ethernet.maintain();
 
-  if (!sendData()){
+  if (!networkSendData()){
     Serial.println("Network update: Failed to send data...");
   }
 }

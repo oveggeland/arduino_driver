@@ -12,7 +12,7 @@ NTP and PTP configurations
 #define NTP_SERVER_IP IPAddress(192,168,1,56)
 #define NTP_CLIENT_PORT 1023
 
-#define NTP_INTERVAL 10e6 // Microseconds
+#define DEFAULT_NTP_INTERVAL 10e6 // Microseconds
 #define NTP_TIMEOUT 10e3 // Microseconds
 #define NTP_DRIFT_ATOL 0.1 // Tolerance for drift deviation (away from 1.0 corresponding to no drift)
 
@@ -49,6 +49,10 @@ typedef struct{
 void ntpSetup();
 void ntpReset();
 void ntpUpdate();
+
+uint32_t ntpGetInterval();
+void ntpSetInterval(uint32_t interval_ms);
+int32_t ntpGetOffset();
 
 void getCurrentTime(uint32_t &sec, uint32_t &usec);
 void getCurrentTime(timeval &t);

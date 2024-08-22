@@ -25,3 +25,6 @@ bool sendUdpMsg(EthernetUDP *pcb, IPAddress dst_ip, int dst_port, uint8_t *buffe
 
 // Used to push data to the output buffer (E.g. gnss or imu using this to send data to host computer)
 void networkPushData(uint8_t* src_buffer, uint16_t size);
+
+// Allows other modules to force network buffer to be sent (If not, this also happens regularly in networkUpdate())
+bool networkSendData();

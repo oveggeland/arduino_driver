@@ -14,9 +14,11 @@ sock.bind((UDP_IP, UDP_PORT))
 
 IMU_HEADER = "$IMU"
 GNSS_HEADER = "$GNSS"
+STATUS_HEADER = "$ST"
 
 IMU_STRUCT_SIZE = 24
 GNSS_STRUCT_SIZE = 25
+STATUS_STRUCT_SIZE = 28
 
 
 def parse_imu_data(data, verbose=False):
@@ -52,7 +54,7 @@ def parse_imu_data(data, verbose=False):
 
 def parse_gnss_data(data, verbose=False):
     if len(data) != GNSS_STRUCT_SIZE:
-        print("IMU struct length error...")
+        print("GNSS struct length error...")
 
     t_sec, t_usec, lat, lng, alt = struct.unpack("@IIiii", data[len(GNSS_HEADER):])
     if verbose:
@@ -66,6 +68,17 @@ def parse_gnss_data(data, verbose=False):
     msg.altitude = alt
 
     return msg
+
+
+def parse_status_data(data, verbose=False):
+    if len(data) != STATUS_STRUCT_SIZE:
+        print("Status struct length error...")
+
+    t_sec, t_usec, age, ntp_interval, ntp_offset, ptp_active, ptp_interval = struct.unpack("=IIIIi?I", data[len(STATUS_HEADER):])
+    if verbose:
+        print(f"{t_sec}.{t_usec:06d} - Age: {age}, T_NTP: {ntp_interval}, NTP_OFFSET: {ntp_offset:+6d}, T_PTP: {ptp_interval}")
+    
+    return True
 
 
 if __name__ == "__main__":
@@ -93,6 +106,13 @@ if __name__ == "__main__":
                 gnss_pub.publish(gnss_msg)
 
                 data = data[GNSS_STRUCT_SIZE:]
+
+
+            elif data[:len(STATUS_HEADER)] == bytes(STATUS_HEADER, 'utf-8'):
+                status_msg = parse_status_data(data[:STATUS_STRUCT_SIZE], verbose=True)
+                #status_pub.publish(status_msg)
+
+                data = data[STATUS_STRUCT_SIZE:]
 
             else: # Some unknown header, move on
                 data = data[1:]

@@ -3,6 +3,7 @@
 #include "network.h"
 #include "sync.h"
 #include "ptp.h"
+#include "control.h"
 
 #define HEARTBEAT_INTERVAL 2000
 uint32_t ts_heartbeat = 0;
@@ -43,6 +44,8 @@ void loop() {
   gnssUpdate();
 
   imuUpdate();
+
+  controlUpdate();
 
   heartbeat();
 }

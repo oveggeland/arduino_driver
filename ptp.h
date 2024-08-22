@@ -3,18 +3,19 @@
 #include "network.h"
 #include "sync.h"
 
-#define MAC_ADDRESS \
-  { 0xA8, 0x61, 0x0A, 0xAF, 0x01, 0xC0 }
-#define DEFAULT_IP IPAddress(192, 168, 1, 198)
-
 #define PTP_IP IPAddress(224, 0, 1, 129)
 #define PTP_GENERAL_PORT 320
 #define PTP_EVENT_PORT 319
-#define PTP_SYNC_INTERVAL 10000
+#define PTP_DEFAULT_INTERVAL 10000
 
 void ptpSetup();
 void ptpUpdate();
 
+void ptpSetInterval(uint32_t interval_ms);
+uint32_t ptpGetInterval();
+
+void ptpActive(bool set);
+bool ptpIsActive();
 
 /* Using reversed endian, copy 'size' bytes from 'src' to 'dest'*/
 void memcpy_reverse_endian(uint8_t* dest, uint8_t* src, size_t size);

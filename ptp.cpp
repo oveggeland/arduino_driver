@@ -8,6 +8,8 @@ struct ptp_sync sync_msg = { 0 };
 struct ptp_followup followup_msg = { 0 };
 struct ptp_delayresp delayresp_msg = { 0 };
 
+bool ptp_active_ = true;
+uint32_t ptp_interval_ = PTP_DEFAULT_INTERVAL; 
 
 void initHeaders() {
   // Common header
@@ -151,7 +153,10 @@ bool delayRespond(uint32_t timeout) {
 uint16_t seq = 0;
 uint32_t t_sync = 0;
 void ptpUpdate() {
-  if (millis() - t_sync > PTP_SYNC_INTERVAL){
+  if (!ptp_active_)
+    return;
+
+  if (millis() - t_sync > ptp_interval_){
     announce(seq);
 
     timeval t1_ptp;
@@ -167,3 +172,19 @@ void ptpUpdate() {
     t_sync = millis();
   }
 }
+
+void ptpSetInterval(uint32_t interval_ms){
+  ptp_interval_ = interval_ms;
+}
+
+uint32_t ptpGetInterval(){
+  return ptp_interval_;
+}
+
+void ptpActive(bool set){
+  ptp_active_ = set;
+}
+
+bool ptpIsActive(){
+  return ptp_active_;
+};
