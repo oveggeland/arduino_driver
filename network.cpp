@@ -6,13 +6,14 @@ EthernetUDP network_pcb;
 uint8_t output_buffer[OUTPUT_BUFFER_SIZE];
 volatile uint16_t output_buffer_cnt;
 
+uint8_t dhcp_status_ = 0;
 
 void networkSetup(){
   Serial.println("Network setup");
 
   // Start ethernet and UDP
   byte mac[] = MAC_ADDRESS;
-  if (Ethernet.begin(mac, 1000, 200) == 0){
+  if (Ethernet.begin(mac, 200, 100) == 0){
     Serial.println("DHCP connection failed, initializing with static IP");
     Ethernet.begin(mac, DEFAULT_IP);
   }
@@ -39,7 +40,7 @@ bool networkSendData(){
 }
 
 void networkUpdate(){
-  Ethernet.maintain();
+  dhcp_status_ = Ethernet.maintain();
 
   if (!networkSendData()){
     Serial.println("Network update: Failed to send data...");
@@ -89,4 +90,14 @@ bool sendUdpMsg(EthernetUDP *pcb, IPAddress dst_ip, int dst_port, uint8_t *buffe
   }
 
   return true;
+}
+
+bool getDhcpStatus(){
+  if (dhcp_status_ & 1) // Error is on 1 and 3. 0, 2 and 4 is ok. So LSB can not be 1. 
+    return false;
+  return true;
+}
+
+uint32_t getIP(){
+  return Ethernet.localIP();
 }

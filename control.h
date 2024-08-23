@@ -14,12 +14,6 @@ void controlUpdate();
 #pragma pack(1)
 typedef struct {
   char header[3] = {'$', 'S', 'T'};
-  
-  // Network configuration
-  // uint8_t local_ip[4];
-  // uint8_t local_port;
-  // uint8_t remote_ip[4];
-  // uint8_t remote_port;
 
   // Timestamp
   uint32_t t_sec;
@@ -28,6 +22,10 @@ typedef struct {
   // Time since last reset of arduino
   uint32_t age;
   
+  // Network stuff
+  uint32_t ip;
+  bool dhcp_status; 
+
   // NTP stuff
   uint32_t ntp_interval;
   int32_t ntp_offset;

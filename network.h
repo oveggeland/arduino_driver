@@ -31,3 +31,7 @@ bool networkSendData();
 
 // Read data from network socket onto buffer, returns number of bytes read
 uint16_t networkReadData(uint8_t* buffer, uint16_t buffer_size);
+
+// DHCP status
+bool getDhcpStatus();
+uint32_t getIP();

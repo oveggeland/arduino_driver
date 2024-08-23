@@ -12,6 +12,9 @@ void statusUpdate(){
   st.t_usec = ts.usec;
   st.age = millis();
 
+  st.ip = getIP();
+  st.dhcp_status = getDhcpStatus();
+
   st.ntp_interval = ntpGetInterval();
   st.ntp_offset = ntpGetOffset();
 
@@ -22,7 +25,7 @@ void statusUpdate(){
   st.imu_sr = imuGetSampleRate();
 
   st.gnss_active = gnssIsActive();
-  st.gnss_sr = gnssGetSampleRate();
+  st.gnss_sr = GNSS_DEFAULT_SAMPLE_RATE; //gnssGetSampleRate(); // THIS SHOULD NOT BE USED (MESSES UP I2C bus somehow??)
 
   networkPushData((uint8_t*) &st, sizeof(st));
   networkSendData();
@@ -46,7 +49,7 @@ void executeCommand(arduinoCommand cmd){
   imuSetSampleRate(cmd.imu_sr);
 
   gnssActive(cmd.gnss_active);
-  gnssSetSampleRate(cmd.gnss_sr);
+  // gnssSetSampleRate(cmd.gnss_sr);
 }
 
 void parseCommands(){
