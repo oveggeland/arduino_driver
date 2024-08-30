@@ -25,7 +25,7 @@ void initHeaders() {
   announce_msg.header.message_type = 0x0b;
   memset_reverse_endian((uint8_t *)&announce_msg.header.msg_length, 64, 2);
   announce_msg.header.control_field = 0x05;
-  announce_msg.header.log_message_interval = 1;
+  announce_msg.header.log_message_interval = 4;
 
 
   // Sync specific adjustments

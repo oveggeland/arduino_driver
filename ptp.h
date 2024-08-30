@@ -6,7 +6,7 @@
 #define PTP_IP IPAddress(224, 0, 1, 129)
 #define PTP_GENERAL_PORT 320
 #define PTP_EVENT_PORT 319
-#define PTP_DEFAULT_INTERVAL 10000
+#define PTP_DEFAULT_INTERVAL 4000
 
 void ptpSetup();
 void ptpUpdate();

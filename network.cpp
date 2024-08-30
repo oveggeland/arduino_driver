@@ -13,7 +13,7 @@ void networkSetup(){
 
   // Start ethernet and UDP
   byte mac[] = MAC_ADDRESS;
-  if (Ethernet.begin(mac, 200, 100) == 0){
+  if (Ethernet.begin(mac, 2000, 1000) == 0){
     Serial.println("DHCP connection failed, initializing with static IP");
     Ethernet.begin(mac, DEFAULT_IP);
   }

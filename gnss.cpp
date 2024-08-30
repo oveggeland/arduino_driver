@@ -37,11 +37,11 @@ void gnssSetup(){
   */
   myGNSS.newCfgValset(VAL_LAYER_RAM); // Create a new Configuration Interface VALSET message. Apply the changes in RAM only (not BBR).
 
-  myGNSS.addCfgValset(UBLOX_CFG_TP_PERIOD_TP1, 0); // Set the period to zero during locking
-  myGNSS.addCfgValset(UBLOX_CFG_TP_LEN_TP1, 0); // Set the pulse length to zero during locking
+  myGNSS.addCfgValset(UBLOX_CFG_TP_PERIOD_TP1, 1000000); // Set the period to zero during locking
+  myGNSS.addCfgValset(UBLOX_CFG_TP_LEN_TP1, 500000); // Set the pulse length to zero during locking
 
   myGNSS.addCfgValset(UBLOX_CFG_TP_PERIOD_LOCK_TP1, 1000000); // Set the period (us) after lock complete
-  myGNSS.addCfgValset(UBLOX_CFG_TP_LEN_LOCK_TP1, 5000); // Set the pulse length (us) after lock complete
+  myGNSS.addCfgValset(UBLOX_CFG_TP_LEN_LOCK_TP1, 100000); // Set the pulse length (us) after lock complete
 
   myGNSS.addCfgValset(UBLOX_CFG_TP_TP1_ENA, 1); // Make sure the enable flag is set to enable the time pulse. (Set to 0 to disable.)
   myGNSS.addCfgValset(UBLOX_CFG_TP_USE_LOCKED_TP1, 1); // Tell the module to use PERIOD while locking and PERIOD_LOCK when locked to GNSS time
@@ -91,6 +91,13 @@ void gnssUpdate(){
     myGnssPkg.latitude = myGNSS.getLatitude();
     myGnssPkg.longitude = myGNSS.getLongitude();
     myGnssPkg.altitude = myGNSS.getAltitude();
+
+    printTime(m_sec, m_usec);
+    Serial.print(": ");
+    Serial.print(myGnssPkg.latitude);
+    Serial.print(", ");
+    Serial.println(myGnssPkg.longitude);
+
 
     networkPushData((uint8_t*) &myGnssPkg, sizeof(myGnssPkg)); // Push print buffer (used for debugging)
   }

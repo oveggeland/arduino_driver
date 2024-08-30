@@ -4,8 +4,8 @@ import struct
 import rospy
 from sensor_msgs.msg import Imu, NavSatFix
 
-# IP of ethernet connection and a valid port (must be same as in Network.h on Arduino side)
-UDP_IP = "192.168.1.56"
+import netifaces as ni
+UDP_IP = ni.ifaddresses('enp87s0')[ni.AF_INET][0]['addr']
 UDP_PORT = 5005
 
 sock = socket.socket(socket.AF_INET, # Internet
@@ -86,6 +86,7 @@ def parse_status_data(data, verbose=False):
 
 if __name__ == "__main__":
     rospy.init_node("test_node")
+    print("Using ip:", UDP_IP)
 
     imu_pub = rospy.Publisher('imu', Imu, queue_size=1000)
     gnss_pub = rospy.Publisher('gnss', NavSatFix, queue_size=10)

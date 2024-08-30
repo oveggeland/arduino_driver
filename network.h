@@ -15,7 +15,7 @@
 #define DEFAULT_IP IPAddress(192, 168, 1, 177)
 #define LOCAL_PORT 8888
 
-#define REMOTE_IP IPAddress(192, 168, 1, 56)
+#define REMOTE_IP IPAddress(10, 3, 64, 215)
 #define REMOTE_PORT 5005
 
 void networkSetup();

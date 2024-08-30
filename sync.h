@@ -9,7 +9,7 @@ NTP and PTP configurations
 #include "network.h"
 
 #define NTP_SERVER_PORT 123
-#define NTP_SERVER_IP IPAddress(192,168,1,56)
+#define NTP_SERVER_IP IPAddress(10,1,30,250)
 #define NTP_CLIENT_PORT 1023
 
 #define DEFAULT_NTP_INTERVAL 10e6 // Microseconds
