@@ -11,12 +11,19 @@
 
 #define UDP_MIN_PAYLOAD_SIZE 256
 
-#define MAC_ADDRESS {0xA8, 0x61, 0x0A, 0xAF, 0x01, 0xC0}
-#define DEFAULT_IP IPAddress(192, 168, 1, 177)
-#define LOCAL_PORT 8888
+#define SYS1 // change this to use second system config
+#ifdef SYS1
+  #define MAC_ADDRESS {0xA8, 0x61, 0x0A, 0xAF, 0x01, 0xC0}
+  #define LOCAL_IP IPAddress(192, 168, 1, 81)
+  #define HOST_IP IPAddress(192, 168, 1, 51)
+#else
+  #define MAC_ADDRESS {0xA8, 0x61, 0x0A, 0xAF, 0x15, 0x59}
+  #define LOCAL_IP IPAddress(192, 168, 1, 82)
+  #define HOST_IP IPAddress(192, 168, 1, 52)
+#endif
 
-#define REMOTE_IP IPAddress(10, 3, 64, 215)
-#define REMOTE_PORT 5005
+#define LOCAL_PORT 8888
+#define HOST_PORT 5005
 
 void networkSetup();
 void networkUpdate();
@@ -27,11 +34,7 @@ bool sendUdpMsg(EthernetUDP *pcb, IPAddress dst_ip, int dst_port, uint8_t *buffe
 void networkPushData(uint8_t* src_buffer, uint16_t size);
 
 // Allows other modules to force network buffer to be sent (If not, this also happens regularly in networkUpdate())
-bool networkSendData();
+bool networkSendData(bool force_send=false);
 
 // Read data from network socket onto buffer, returns number of bytes read
 uint16_t networkReadData(uint8_t* buffer, uint16_t buffer_size);
-
-// DHCP status
-bool getDhcpStatus();
-uint32_t getIP();

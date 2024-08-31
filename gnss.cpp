@@ -2,26 +2,23 @@
 
 SFE_UBLOX_GNSS myGNSS;
 
-uint32_t t_pps_sec;
-uint32_t t_pps_usec;
-uint32_t pps_gnss_sec; // GNSS second of PPS signal
-bool pps_fix;
+// Used for GNSS synchronization of system
+uint32_t t_local_ref = 0;
+uint32_t pps_cnt = 0;
+bool pps_fix = false;
 
 bool gnss_active_ = true;
 
-gnssPackage myGnssPkg; // Data struct for formating network messages
-
-
 void gnssISR(void) {
-  getCurrentTime(t_pps_sec, t_pps_usec);// Capture local time at pps event
-  pps_fix = false;
+  t_local_ref = micros();
+  pps_cnt++;
+  pps_fix = true;
 }
 
 void gnssSetup(){
   Serial.println("GNSS setup");
 
   WIRE_PORT.begin(); // Begin i2c
-
   while (myGNSS.begin(WIRE_PORT) == false) //Connect to the u-blox module
   {
     Serial.println(F("u-blox GNSS not detected. Retrying..."));
@@ -37,11 +34,11 @@ void gnssSetup(){
   */
   myGNSS.newCfgValset(VAL_LAYER_RAM); // Create a new Configuration Interface VALSET message. Apply the changes in RAM only (not BBR).
 
-  myGNSS.addCfgValset(UBLOX_CFG_TP_PERIOD_TP1, 1000000); // Set the period to zero during locking
-  myGNSS.addCfgValset(UBLOX_CFG_TP_LEN_TP1, 500000); // Set the pulse length to zero during locking
+  myGNSS.addCfgValset(UBLOX_CFG_TP_PERIOD_TP1, 0); // Set the period to zero during locking
+  myGNSS.addCfgValset(UBLOX_CFG_TP_LEN_TP1, 0); // Set the pulse length to zero during locking
 
   myGNSS.addCfgValset(UBLOX_CFG_TP_PERIOD_LOCK_TP1, 1000000); // Set the period (us) after lock complete
-  myGNSS.addCfgValset(UBLOX_CFG_TP_LEN_LOCK_TP1, 100000); // Set the pulse length (us) after lock complete
+  myGNSS.addCfgValset(UBLOX_CFG_TP_LEN_LOCK_TP1, 1000); // Set the pulse length (us) after lock complete
 
   myGNSS.addCfgValset(UBLOX_CFG_TP_TP1_ENA, 1); // Make sure the enable flag is set to enable the time pulse. (Set to 0 to disable.)
   myGNSS.addCfgValset(UBLOX_CFG_TP_USE_LOCKED_TP1, 1); // Tell the module to use PERIOD while locking and PERIOD_LOCK when locked to GNSS time
@@ -69,35 +66,18 @@ void gnssUpdate(){
     return;
 
   if (myGNSS.getPVT(1) == true){
-    if (!pps_fix){ // We assume that the first GNSS message we receive is less than 0.5s away from the pps signal (very reasonable as the PPS interrupt is much faster than reading the data solution over i2c)
-      pps_gnss_sec = myGNSS.getUnixEpoch(); // Get second when timestamp was registered
-      pps_fix = true;
+    if (pps_fix){
+      newGNSSReference(t_local_ref, timeval{myGNSS.getUnixEpoch(), 0});
+      pps_fix = false;
     }
 
-    // Get measurement gnss time
-    uint32_t m_usec;
-    uint32_t m_sec = myGNSS.getUnixEpoch(m_usec);
-
-    // Offset from pps time (in micros)
-    int32_t pps_offset_us = getTimeDiff(pps_gnss_sec, 0, m_sec, m_usec); // Time since/before pps in microseconds
-
-    // Timestamp microseconds (in arduino time)
-    int32_t ts_usec = (int32_t)t_pps_usec + pps_offset_us; // This could be negative or more than 1e6, so this should be adjusted for
-
-    myGnssPkg.t_sec = t_pps_sec + (ts_usec / 1.0e6); // Timestamp, adjust seconds if microsecond overflow
-    myGnssPkg.t_usec = ts_usec + 1e6*(int32_t)(t_pps_sec - myGnssPkg.t_sec); // Timestamp, adjust microsecond according to how many seconds we adjusted in previous line
-
+    gnssPackage myGnssPkg;
+    myGnssPkg.t_sec = myGNSS.getUnixEpoch(myGnssPkg.t_usec);
+  
     // Retrieve position
     myGnssPkg.latitude = myGNSS.getLatitude();
     myGnssPkg.longitude = myGNSS.getLongitude();
     myGnssPkg.altitude = myGNSS.getAltitude();
-
-    printTime(m_sec, m_usec);
-    Serial.print(": ");
-    Serial.print(myGnssPkg.latitude);
-    Serial.print(", ");
-    Serial.println(myGnssPkg.longitude);
-
 
     networkPushData((uint8_t*) &myGnssPkg, sizeof(myGnssPkg)); // Push print buffer (used for debugging)
   }

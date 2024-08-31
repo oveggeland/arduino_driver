@@ -8,7 +8,6 @@
 #define HEARTBEAT_INTERVAL 2000
 uint32_t ts_heartbeat = 0;
 
-
 void heartbeat(){
   if (millis() - ts_heartbeat > HEARTBEAT_INTERVAL){
     ts_heartbeat = millis();
@@ -24,8 +23,6 @@ void setup() {
 
   networkSetup();
 
-  ntpSetup();
-
   ptpSetup();
 
   gnssSetup();
@@ -36,8 +33,6 @@ void setup() {
 
 void loop() {
   networkUpdate();
-
-  ntpUpdate();
 
   ptpUpdate();
 

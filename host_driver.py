@@ -18,7 +18,7 @@ STATUS_HEADER = "$ST"
 
 IMU_STRUCT_SIZE = 24
 GNSS_STRUCT_SIZE = 25
-STATUS_STRUCT_SIZE = 37
+STATUS_STRUCT_SIZE = 28
 
 
 def parse_imu_data(data, verbose=False):
@@ -74,11 +74,10 @@ def parse_status_data(data, verbose=False):
     if len(data) != STATUS_STRUCT_SIZE:
         print("Status struct length error...")
 
-    t_sec, t_usec, age, ip, dhcp_st, ntp_interval, ntp_offset, ptp_active, ptp_interval, imu_active, imu_sr, gnss_active, gnss_sr = struct.unpack("=IIII?Ii?I?B?B", data[len(STATUS_HEADER):])
+    t_sec, t_usec, age, sync_offset, ptp_active, ptp_interval, imu_active, imu_sr, gnss_active, gnss_sr = struct.unpack("=IIIi?I?B?B", data[len(STATUS_HEADER):])
     
-    ip = struct.unpack("BBBB", struct.pack("I", ip))
     if verbose:
-        print(f"{t_sec}.{t_usec:06d} - Age: {age}, IP: {ip}, DHCP_STATUS: {dhcp_st}, T_NTP: {ntp_interval}, NTP_OFFSET: {ntp_offset:+6d}, T_PTP: {ptp_interval}")
+        print(f"{t_sec}.{t_usec:06d} - Age: {age}, SYNC OFFSET: {sync_offset:+6d}, T_PTP: {ptp_interval}")
         print(f"{t_sec}.{t_usec:06d} - Imu active: {imu_active}, Imu sample rate: {imu_sr}, GNSS active: {gnss_active}, GNSS sample rate: {gnss_sr}")
     
     return True

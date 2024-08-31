@@ -15,20 +15,11 @@ void controlUpdate();
 typedef struct {
   char header[3] = {'$', 'S', 'T'};
 
-  // Timestamp
+  // Timing
   uint32_t t_sec;
   uint32_t t_usec;
-  
-  // Time since last reset of arduino
-  uint32_t age;
-  
-  // Network stuff
-  uint32_t ip;
-  bool dhcp_status; 
-
-  // NTP stuff
-  uint32_t ntp_interval;
-  int32_t ntp_offset;
+  uint32_t age; // Local time (arduino clock)
+  int32_t sync_offset;
 
   // PTP
   bool ptp_active;

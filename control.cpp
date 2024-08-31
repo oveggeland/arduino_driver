@@ -12,11 +12,7 @@ void statusUpdate(){
   st.t_usec = ts.usec;
   st.age = millis();
 
-  st.ip = getIP();
-  st.dhcp_status = getDhcpStatus();
-
-  st.ntp_interval = ntpGetInterval();
-  st.ntp_offset = ntpGetOffset();
+  st.sync_offset = getSyncOffset();
 
   st.ptp_active = ptpIsActive();
   st.ptp_interval = ptpGetInterval();
@@ -28,7 +24,7 @@ void statusUpdate(){
   st.gnss_sr = GNSS_DEFAULT_SAMPLE_RATE; //gnssGetSampleRate(); // THIS SHOULD NOT BE USED (MESSES UP I2C bus somehow??)
 
   networkPushData((uint8_t*) &st, sizeof(st));
-  networkSendData();
+  networkSendData(true);
 }
 
 void resetArduino(){
@@ -39,8 +35,6 @@ void executeCommand(arduinoCommand cmd){
   if (cmd.reset){
     resetArduino();
   }
-
-  ntpSetInterval(cmd.ntp_interval);
   
   ptpActive(cmd.ptp_active);
   ptpSetInterval(cmd.ptp_interval);

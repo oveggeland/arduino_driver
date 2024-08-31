@@ -6,32 +6,27 @@ EthernetUDP network_pcb;
 uint8_t output_buffer[OUTPUT_BUFFER_SIZE];
 volatile uint16_t output_buffer_cnt;
 
-uint8_t dhcp_status_ = 0;
-
 void networkSetup(){
   Serial.println("Network setup");
 
+  // Disable SD card (to be safe)
+  pinMode(SD_CARD_PIN, OUTPUT); 
+  digitalWrite(SD_CARD_PIN, HIGH);
+
   // Start ethernet and UDP
   byte mac[] = MAC_ADDRESS;
-  if (Ethernet.begin(mac, 2000, 1000) == 0){
-    Serial.println("DHCP connection failed, initializing with static IP");
-    Ethernet.begin(mac, DEFAULT_IP);
-  }
+  Ethernet.begin(mac, LOCAL_IP);
   
   if (!network_pcb.begin(LOCAL_PORT)){
     Serial.print("Failed to start UDP socket on port: ");
     Serial.println(LOCAL_PORT);
   };
-    
-  // Disable SD card (to be safe)
-  pinMode(SD_CARD_PIN, OUTPUT); 
-  digitalWrite(SD_CARD_PIN, HIGH);
 }
 
-bool networkSendData(){
+bool networkSendData(bool force_send){
   uint32_t bytesToWrite = output_buffer_cnt;
-  if (bytesToWrite > UDP_MIN_PAYLOAD_SIZE){
-    if (!sendUdpMsg(&network_pcb, REMOTE_IP, REMOTE_PORT, output_buffer, output_buffer_cnt))
+  if (force_send || bytesToWrite > UDP_MIN_PAYLOAD_SIZE){
+    if (!sendUdpMsg(&network_pcb, HOST_IP, HOST_PORT, output_buffer, output_buffer_cnt))
       return false;
     
     output_buffer_cnt -= bytesToWrite; // Buffer reset
@@ -40,13 +35,10 @@ bool networkSendData(){
 }
 
 void networkUpdate(){
-  dhcp_status_ = Ethernet.maintain();
-
   if (!networkSendData()){
     Serial.println("Network update: Failed to send data...");
   }
 }
-
 
 void networkPushData(uint8_t* src_buffer, uint16_t size){
   noInterrupts();
@@ -90,14 +82,4 @@ bool sendUdpMsg(EthernetUDP *pcb, IPAddress dst_ip, int dst_port, uint8_t *buffe
   }
 
   return true;
-}
-
-bool getDhcpStatus(){
-  if (dhcp_status_ & 1) // Error is on 1 and 3. 0, 2 and 4 is ok. So LSB can not be 1. 
-    return false;
-  return true;
-}
-
-uint32_t getIP(){
-  return Ethernet.localIP();
 }
