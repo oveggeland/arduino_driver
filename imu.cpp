@@ -1,11 +1,6 @@
 #include "imu.h"
 
 // Status/Diagnostics variables
-uint32_t imu_t_diag = 0;
-
-bool imu_active_ = true;
-bool imu_error_flag_ = false;
-
 uint16_t readReg(uint16_t addr){
   SPI.beginTransaction(IMU_SPI_SETTINGS);  
   digitalWrite(IMU_CS_PIN, LOW); // Chip select
@@ -80,8 +75,6 @@ uint8_t imuGetSampleRate(){
 }
 
 void drdyISR(void) {
-  if (!imu_active_)
-    return;
   imuPackage pkg;
   getCurrentTime(pkg.t_sec, pkg.t_usec);
   burstRead((uint16_t*) pkg.rate, (uint16_t*) pkg.acc);
@@ -127,36 +120,28 @@ void imuReset(){
   writeReg(EKF_CNFG, reg | (1 << 3));
 
   imuDiag();
+
+  Serial.print("IMU ID: ");
+  Serial.println(readReg(PROD_ID));
 }
 
 void imuDiag(){
-  if (readReg(DIAG_STS)){
+  if (readReg(DIAG_STS))
     Serial.print("IMU: Diag error");
-    imu_error_flag_ = true;
-  }
-  else if (readReg(SYS_E_FLAG) & ~(0b11 << 8)){
+  
+  else if (readReg(SYS_E_FLAG) & ~(0b11 << 8))
     Serial.println("IMU: SYS ERROR");
-    imu_error_flag_ = true;
-  }
-  else{
-    imu_error_flag_ = false;
-  }
-
-  imu_t_diag = millis();
 }
 
-// Called frequently from the main program
+
 void imuUpdate(){
-  // Run occasional diagnostics
-  if (millis() - imu_t_diag > IMU_DIAG_INTERVAL)
-    imuDiag();
+  // Do nothing, ISR handles this. Could be extended to perform system checks and reboots for IMU?
 }
 
-
-bool imuIsActive(){
-  return imu_active_;
+float imuGetTemperature(){
+  return 0.00565*readReg(TEMP_OUT);
 }
 
-void imuActive(bool set){
-  imu_active_ = set;
+uint16_t imuGetId(){
+  return readReg(PROD_ID);
 }

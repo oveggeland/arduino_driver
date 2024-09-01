@@ -28,12 +28,11 @@ typedef struct {
   int16_t rate[3];
 } imuPackage;
 
-
-bool imuIsActive();
-void imuActive(bool set); 
-
 uint8_t imuGetSampleRate();
 void imuSetSampleRate(uint8_t sr);
+
+float imuGetTemperature();
+uint16_t imuGetId();
 
 void imuSetup();
 void imuReset();

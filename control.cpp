@@ -6,22 +6,20 @@ char cmd_header[] = CMD_HEADER; // Used to validate incoming commands
 void statusUpdate(){
   arduinoStatus st;
 
-  // First update all status struct members
-  timeval ts = getCurrentTime();
-  st.t_sec = ts.sec;
-  st.t_usec = ts.usec;
-  st.age = millis();
+  st.ip = (uint32_t) Ethernet.localIP();
 
+  // First update all status struct members
+  timeval t = getCurrentTime();
+  st.t_sec = t.sec;
+  st.t_usec = t.usec;
+  st.age = millis();
   st.sync_offset = getSyncOffset();
 
-  st.ptp_active = ptpIsActive();
+  st.imu_id = imuGetId();
+  st.imu_rate = imuGetSampleRate();
+  st.imu_temp = imuGetTemperature();
+
   st.ptp_interval = ptpGetInterval();
-
-  st.imu_active = imuIsActive();
-  st.imu_sr = imuGetSampleRate();
-
-  st.gnss_active = gnssIsActive();
-  st.gnss_sr = GNSS_DEFAULT_SAMPLE_RATE; //gnssGetSampleRate(); // THIS SHOULD NOT BE USED (MESSES UP I2C bus somehow??)
 
   networkPushData((uint8_t*) &st, sizeof(st));
   networkSendData(true);
@@ -36,14 +34,8 @@ void executeCommand(arduinoCommand cmd){
     resetArduino();
   }
   
-  ptpActive(cmd.ptp_active);
   ptpSetInterval(cmd.ptp_interval);
-
-  imuActive(cmd.imu_active);
   imuSetSampleRate(cmd.imu_sr);
-
-  gnssActive(cmd.gnss_active);
-  // gnssSetSampleRate(cmd.gnss_sr);
 }
 
 void parseCommands(){
