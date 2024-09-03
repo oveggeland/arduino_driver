@@ -1,7 +1,7 @@
 #include "control.h"
 
 uint32_t ts_last_update_ = 0;
-char cmd_header[] = CMD_HEADER; // Used to validate incoming commands
+char cmd_header[4] = CMD_HEADER; // Used to validate incoming commands
 
 void statusUpdate(){
   arduinoStatus st;
@@ -25,17 +25,10 @@ void statusUpdate(){
   networkSendData(true);
 }
 
-void resetArduino(){
-  Serial.println("Arduino reset not implemented");
-}
-
 void executeCommand(arduinoCommand cmd){
   if (cmd.reset){
-    resetArduino();
+    // NVIC_SystemReset(); // This is not working..
   }
-  
-  ptpSetInterval(cmd.ptp_interval);
-  imuSetSampleRate(cmd.imu_sr);
 }
 
 void parseCommands(){
@@ -48,8 +41,7 @@ void parseCommands(){
   if (bytesRead == sizeof(cmd)){
     // Correct size, let's check header
     if (memcmp(cmd_header, cmd.header, sizeof(cmd.header)) == 0){
-      Serial.println("Received a command");
-      
+      // The command was correct
       executeCommand(cmd);
     }
   }
