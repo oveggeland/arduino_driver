@@ -82,8 +82,6 @@ void drdyISR(void) {
 }
 
 void imuSetup(){
-  Serial.println("IMU setup");
-
   SPI.begin(); // This is also called by Ethernet.h, but no worries about that. Safer to do both
 
   // Setup pins
@@ -104,33 +102,12 @@ void imuReset(){
   writeReg(GLOB_CMD, 1 << 7); // This is the equivalent of triggering the RST pin (takes 1.8 seconds according to datasheet)
   delay(1800);
 
-  // Self test
-  writeReg(GLOB_CMD, 1 << 1); // Self test (Takes 12ms according to datasheet)
-  delay(12);
-
-  // Flash test
-  writeReg(GLOB_CMD, 1 << 2); // Flash memory test (Takes 53ms according to datasheet)
-  delay(53);
-
   // Set sample rate
   imuSetSampleRate(IMU_DEFAULT_SAMPLE_RATE); 
 
   // Measurements should be in body frame
   uint16_t reg = readReg(EKF_CNFG);
   writeReg(EKF_CNFG, reg | (1 << 3));
-
-  imuDiag();
-
-  Serial.print("IMU ID: ");
-  Serial.println(readReg(PROD_ID));
-}
-
-void imuDiag(){
-  if (readReg(DIAG_STS))
-    Serial.print("IMU: Diag error");
-  
-  else if (readReg(SYS_E_FLAG) & ~(0b11 << 8))
-    Serial.println("IMU: SYS ERROR");
 }
 
 
@@ -139,7 +116,7 @@ void imuUpdate(){
 }
 
 float imuGetTemperature(){
-  return 0.00565*readReg(TEMP_OUT);
+  return 25 + 0.00565*(int32_t)readReg(TEMP_OUT);
 }
 
 uint16_t imuGetId(){

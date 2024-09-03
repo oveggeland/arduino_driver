@@ -63,12 +63,8 @@ void memset_reverse_endian(uint8_t* dest, uint64_t value, size_t size){
 
 void ptpSetup() {
   // put your setup code here, to run once:
-  if (!ptp_pcb_general.beginMulticast(PTP_IP, PTP_GENERAL_PORT)) {
-    Serial.println("Failed to start PTP_PCB_GENERAL");
-  };
-  if (!ptp_pcb_event.beginMulticast(PTP_IP, PTP_EVENT_PORT)) {
-    Serial.println("Failed to start PTP_PCB_EVENT");
-  }
+  ptp_pcb_general.beginMulticast(PTP_IP, PTP_GENERAL_PORT);
+  ptp_pcb_event.beginMulticast(PTP_IP, PTP_EVENT_PORT);
 
   initHeaders();
 }
@@ -141,7 +137,6 @@ bool delayRespond(uint32_t timeout) {
       ptp_pcb_event.read((uint8_t *)&ptpReq, sizeof(ptpReq));  // read the packet into the buffer
 
       if(!sendDelayRespMsg(t3_ptp, ptpReq)){
-        Serial.println("Delay response failed");
         return false;
       }
     }
@@ -162,9 +157,7 @@ void ptpUpdate() {
     timeval t1_ptp;
     if (sendSyncMsg(seq, t1_ptp)) {
       if (sendFollowupMsg(seq, t1_ptp)) {
-        if (delayRespond(200)){
-          Serial.println("PTP sync finished succesfully");
-        }
+        delayRespond(200);
       }
       seq++;
     }

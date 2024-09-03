@@ -3,9 +3,6 @@
 // STD libs
 #include <SPI.h>
 
-// Imported libs
-#include <ICM_20948.h>
-
 // Code imports
 #include "ADIS16480.h"
 #include "network.h"
@@ -36,5 +33,4 @@ uint16_t imuGetId();
 
 void imuSetup();
 void imuReset();
-void imuDiag();
 void imuUpdate();

@@ -7,8 +7,6 @@ uint8_t output_buffer[OUTPUT_BUFFER_SIZE];
 volatile uint16_t output_buffer_cnt;
 
 void networkSetup(){
-  Serial.println("Network setup");
-
   // Disable SD card (to be safe)
   pinMode(SD_CARD_PIN, OUTPUT); 
   digitalWrite(SD_CARD_PIN, HIGH);
@@ -17,10 +15,7 @@ void networkSetup(){
   byte mac[] = MAC_ADDRESS;
   Ethernet.begin(mac, LOCAL_IP);
   
-  if (!network_pcb.begin(LOCAL_PORT)){
-    Serial.print("Failed to start UDP socket on port: ");
-    Serial.println(LOCAL_PORT);
-  };
+  network_pcb.begin(LOCAL_PORT);
 }
 
 bool networkSendData(bool force_send){
@@ -35,9 +30,7 @@ bool networkSendData(bool force_send){
 }
 
 void networkUpdate(){
-  if (!networkSendData()){
-    Serial.println("Network update: Failed to send data...");
-  }
+  networkSendData();
 }
 
 void networkPushData(uint8_t* src_buffer, uint16_t size){
@@ -55,7 +48,6 @@ uint16_t networkReadData(uint8_t* buffer, uint16_t buffer_size){
     return 0;
   }
   else if (bytesAvailable > buffer_size){
-    Serial.println("Can not read data from UDP, buffer size is too small");
     return 0;
   }
 

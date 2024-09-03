@@ -7,7 +7,9 @@ uint32_t t_local_ref = 0;
 uint32_t pps_cnt = 0;
 bool pps_fix = false;
 
-bool gnss_active_ = true;
+uint32_t t_last_connection = 0;
+uint32_t t_reset = 0;
+bool gnss_reset = false;
 
 void gnssISR(void) {
   t_local_ref = micros();
@@ -15,15 +17,20 @@ void gnssISR(void) {
   pps_fix = true;
 }
 
-void gnssSetup(){
-  Serial.println("GNSS setup");
 
+void gnssReset(){
+  digitalWrite(GNSS_RESET_PIN, LOW);
+  delay(20);
+  digitalWrite(GNSS_RESET_PIN, HIGH);
+  gnss_reset = true;
+  t_reset = millis();
+}
+
+
+bool gnssConfig(){
   WIRE_PORT.begin(); // Begin i2c
-  while (myGNSS.begin(WIRE_PORT) == false) //Connect to the u-blox module
-  {
-    Serial.println(F("u-blox GNSS not detected. Retrying..."));
-    delay (100);
-  }
+  if (!myGNSS.begin(WIRE_PORT)) //Connect to the u-blox module
+    return false;
 
   myGNSS.setI2COutput(COM_TYPE_UBX); //Set the I2C port to output UBX only (turn off NMEA noise)
   
@@ -46,15 +53,27 @@ void gnssSetup(){
   myGNSS.addCfgValset(UBLOX_CFG_TP_PULSE_LENGTH_DEF, 1); // Tell the module to set the pulse length (not the pulse ratio / duty). RATIO = 0. LENGTH = 1.
   myGNSS.addCfgValset(UBLOX_CFG_TP_POL_TP1, 0); // Tell the module that we want the falling edge at the top of second. Falling Edge = 0. Rising Edge = 1.
 
-  // Now set the time pulse parameters
-  if (myGNSS.sendCfgValset() == false)
-    Serial.println(F("VALSET failed!"));
+  if (!myGNSS.sendCfgValset())
+    return false;
   
-  myGNSS.setNavigationFrequency(GNSS_DEFAULT_SAMPLE_RATE);
+  if (!myGNSS.setNavigationFrequency(GNSS_DEFAULT_SAMPLE_RATE))
+    return false;
+
+  return true;
+}
+
+
+void gnssSetup(){
+  // Set reset pin high (reset is active low)
+  pinMode(GNSS_RESET_PIN, OUTPUT);
+  digitalWrite(GNSS_RESET_PIN, HIGH);
 
   // Setup a interrupt at for PPS monitoring
   pinMode(GNSS_PPS_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(GNSS_PPS_PIN), gnssISR, FALLING);  // Set up a falling interrupt
+
+  // This is also called after HW resets
+  gnssConfig();
 }
 
 /*
@@ -62,33 +81,36 @@ This is assumed to be called at least once for each GNSS measurement.
 If this is not the case, measurements will be missed and time sync might be corrupted. 
 */
 void gnssUpdate(){
-  if (!gnss_active_)
-    return;
+  if (gnss_reset){
+    if(gnssConfig()){
+      gnss_reset = false;
+      t_last_connection = millis();
+    }
+  }
 
-  if (myGNSS.getPVT(1) == true){
+  if ((!gnss_reset || millis() - t_reset > GNSS_RESET_TIME) && millis() - t_last_connection > GNSS_TIMEOUT)
+    gnssReset();
+
+  if (!gnss_reset && myGNSS.getPVT(1) == true){
+    t_last_connection = millis();
+
     if (pps_fix){
       newGNSSReference(t_local_ref, timeval{myGNSS.getUnixEpoch(), 0});
       pps_fix = false;
     }
 
-    gnssPackage myGnssPkg;
-    myGnssPkg.t_sec = myGNSS.getUnixEpoch(myGnssPkg.t_usec);
-  
-    // Retrieve position
-    myGnssPkg.latitude = myGNSS.getLatitude();
-    myGnssPkg.longitude = myGNSS.getLongitude();
-    myGnssPkg.altitude = myGNSS.getAltitude();
+    if (myGNSS.getFixType() == 3){
+      gnssPackage myGnssPkg;
+      myGnssPkg.t_sec = myGNSS.getUnixEpoch(myGnssPkg.t_usec);
+    
+      // Retrieve position
+      myGnssPkg.latitude = myGNSS.getLatitude();
+      myGnssPkg.longitude = myGNSS.getLongitude();
+      myGnssPkg.altitude = myGNSS.getAltitude();
 
-    networkPushData((uint8_t*) &myGnssPkg, sizeof(myGnssPkg)); // Push print buffer (used for debugging)
+      networkPushData((uint8_t*) &myGnssPkg, sizeof(myGnssPkg)); // Push print buffer (used for debugging)
+    }
   }
-}
-
-bool gnssIsActive(){
-  return gnss_active_;
-}
-
-void gnssActive(bool set){
-  gnss_active_ = set;
 }
 
 uint8_t gnssGetSampleRate(){
