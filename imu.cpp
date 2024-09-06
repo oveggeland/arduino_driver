@@ -1,5 +1,8 @@
 #include "imu.h"
 
+imuPackage pkg;
+volatile bool isr_flag = false;
+
 // Status/Diagnostics variables
 uint16_t readReg(uint16_t addr){
   SPI.beginTransaction(IMU_SPI_SETTINGS);  
@@ -42,24 +45,34 @@ void burstRead(uint16_t* rate, uint16_t* acc){
 
   SPI.transfer16(0x8000); // Assert page 0
 
-  // Send read command, followed by dummy bytes (SPI_NOP) to retrieve data from IMU data registers
   SPI.transfer16(X_GYRO_OUT << 8);
-  rate[0] = SPI.transfer16(SPI_NOP);
+  rate[0] = SPI.transfer16(Y_GYRO_OUT << 8);
+  rate[1] = SPI.transfer16(Z_GYRO_OUT << 8);
+  rate[2] = SPI.transfer16(X_ACCL_OUT << 8);
 
-  SPI.transfer16(Y_GYRO_OUT << 8);
-  rate[1] = SPI.transfer16(SPI_NOP);
-
-  SPI.transfer16(Z_GYRO_OUT << 8);
-  rate[2] = SPI.transfer16(SPI_NOP);
-
-  SPI.transfer16(X_ACCL_OUT << 8);
-  acc[0] = SPI.transfer16(SPI_NOP);
-
-  SPI.transfer16(Y_ACCL_OUT << 8);
-  acc[1] = SPI.transfer16(SPI_NOP);
-
-  SPI.transfer16(Z_ACCL_OUT << 8);
+  acc[0] = SPI.transfer16(Y_ACCL_OUT << 8);
+  acc[1] = SPI.transfer16(Z_ACCL_OUT << 8);
   acc[2] = SPI.transfer16(SPI_NOP);
+  
+
+  // // Send read command, followed by dummy bytes (SPI_NOP) to retrieve data from IMU data registers
+  // SPI.transfer16(X_GYRO_OUT << 8);
+  // rate[0] = SPI.transfer16(SPI_NOP);
+
+  // SPI.transfer16(Y_GYRO_OUT << 8);
+  // rate[1] = SPI.transfer16(SPI_NOP);
+
+  // SPI.transfer16(Z_GYRO_OUT << 8);
+  // rate[2] = SPI.transfer16(SPI_NOP);
+
+  // SPI.transfer16(X_ACCL_OUT << 8);
+  // acc[0] = SPI.transfer16(SPI_NOP);
+
+  // SPI.transfer16(Y_ACCL_OUT << 8);
+  // acc[1] = SPI.transfer16(SPI_NOP);
+
+  // SPI.transfer16(Z_ACCL_OUT << 8);
+  // acc[2] = SPI.transfer16(SPI_NOP);
 
   // End transaction
   digitalWrite(IMU_CS_PIN, HIGH); // Chip select
@@ -75,10 +88,10 @@ uint8_t imuGetSampleRate(){
 }
 
 void drdyISR(void) {
-  imuPackage pkg;
-  getCurrentTime(pkg.t_sec, pkg.t_usec);
-  burstRead((uint16_t*) pkg.rate, (uint16_t*) pkg.acc);
-  networkPushData((uint8_t*) &pkg, sizeof(pkg));
+  timeval t = getCurrentTime();
+  pkg.t_sec = t.sec;
+  pkg.t_usec = t.usec;
+  isr_flag = true;
 }
 
 void imuSetup(){
@@ -112,7 +125,12 @@ void imuReset(){
 
 
 void imuUpdate(){
-  // Do nothing, ISR handles this. Could be extended to perform system checks and reboots for IMU?
+  if (isr_flag){
+    burstRead((uint16_t*) pkg.rate, (uint16_t*) pkg.acc);
+    networkPushData((uint8_t*) &pkg, sizeof(pkg));
+
+    isr_flag = false;
+  }
 }
 
 float imuGetTemperature(){

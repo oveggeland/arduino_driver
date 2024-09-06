@@ -125,22 +125,16 @@ bool sendDelayRespMsg(timeval t3_ptp, struct ptp_delayreq ptpReq) {
   return sendUdpMsg(&ptp_pcb_general, PTP_IP, PTP_GENERAL_PORT, (uint8_t *)&delayresp_msg, sizeof(delayresp_msg));
 }
 
-bool delayRespond(uint32_t timeout) {
-  uint32_t t_start = millis();
+bool delayRespond() {
+  int bytesAvailable = ptp_pcb_event.parsePacket();
+  timeval t3_ptp = getCurrentTime();
 
-  do {
-    int bytesAvailable = ptp_pcb_event.parsePacket();
-    timeval t3_ptp = getCurrentTime();
+  if (bytesAvailable == sizeof(struct ptp_delayreq)) {
+    struct ptp_delayreq ptpReq;
+    ptp_pcb_event.read((uint8_t *)&ptpReq, sizeof(ptpReq));  // read the packet into the buffer
 
-    if (bytesAvailable == sizeof(struct ptp_delayreq)) {
-      struct ptp_delayreq ptpReq;
-      ptp_pcb_event.read((uint8_t *)&ptpReq, sizeof(ptpReq));  // read the packet into the buffer
-
-      if(!sendDelayRespMsg(t3_ptp, ptpReq)){
-        return false;
-      }
-    }
-  } while ((millis() - t_start < timeout));
+    sendDelayRespMsg(t3_ptp, ptpReq);
+  }
 
   return true;
 }
@@ -151,17 +145,17 @@ void ptpUpdate() {
   if (!ptp_active_)
     return;
 
+  delayRespond();
+
   if (millis() - t_sync > ptp_interval_){
     announce(seq);
 
     timeval t1_ptp;
-    if (sendSyncMsg(seq, t1_ptp)) {
-      if (sendFollowupMsg(seq, t1_ptp)) {
-        delayRespond(200);
-      }
-      seq++;
-    }
+    sendSyncMsg(seq, t1_ptp);
+    sendFollowupMsg(seq, t1_ptp);
 
+    seq++;
+    
     t_sync = millis();
   }
 }

@@ -19,10 +19,12 @@ void statusUpdate(){
   st.imu_rate = imuGetSampleRate();
   st.imu_temp = imuGetTemperature();
 
+  st.gnss_reset = gnssGetResetFlag();
+  st.gnss_reset_cnt = gnssGetResetCount();
+
   st.ptp_interval = ptpGetInterval();
 
   networkPushData((uint8_t*) &st, sizeof(st));
-  networkSendData(true);
 }
 
 void executeCommand(arduinoCommand cmd){

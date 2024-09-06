@@ -11,8 +11,8 @@
 
 #define UDP_MIN_PAYLOAD_SIZE 256
 
-#define SYS1 // change this to use second system config
-#ifdef SYS1
+#define SYS_RIGHT // change this to use second system config
+#ifdef SYS_RIGHT
   #define MAC_ADDRESS {0xA8, 0x61, 0x0A, 0xAF, 0x01, 0xC0}
   #define LOCAL_IP IPAddress(192, 168, 1, 81)
   #define HOST_IP IPAddress(192, 168, 1, 51)

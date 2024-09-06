@@ -34,12 +34,10 @@ void networkUpdate(){
 }
 
 void networkPushData(uint8_t* src_buffer, uint16_t size){
-  noInterrupts();
   if (size <= OUTPUT_BUFFER_SIZE - output_buffer_cnt){
     memcpy(output_buffer + output_buffer_cnt, src_buffer, size);
     output_buffer_cnt += size;
   }
-  interrupts();
 };
 
 uint16_t networkReadData(uint8_t* buffer, uint16_t buffer_size){

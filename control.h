@@ -22,6 +22,8 @@ typedef struct {
   uint16_t imu_id;
   uint8_t imu_rate; 
   float imu_temp;
+  bool gnss_reset; // Flag
+  uint16_t gnss_reset_cnt; 
   uint32_t ptp_interval;
 } arduinoStatus;
 

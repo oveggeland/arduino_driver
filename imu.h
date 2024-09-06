@@ -14,8 +14,6 @@
 #define IMU_SPI_SETTINGS SPISettings(14000000, MSBFIRST, SPI_MODE3)
 #define IMU_DEFAULT_SAMPLE_RATE 200
 
-#define IMU_DIAG_INTERVAL 10000
-
 #pragma pack(1)
 typedef struct {
   char header[4] = {'$', 'I', 'M', 'U'};

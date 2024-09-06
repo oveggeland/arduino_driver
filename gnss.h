@@ -33,6 +33,8 @@ typedef struct {
 void gnssSetup(); 
 void gnssReset();
 void gnssUpdate();
+bool gnssGetResetFlag();
+uint16_t gnssGetResetCount();
 
 uint8_t gnssGetSampleRate();
 void gnssSetSampleRate(uint8_t sr);

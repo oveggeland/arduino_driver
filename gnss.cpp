@@ -4,26 +4,29 @@ SFE_UBLOX_GNSS myGNSS;
 
 // Used for GNSS synchronization of system
 uint32_t t_local_ref = 0;
-uint32_t pps_cnt = 0;
 bool pps_fix = false;
+bool pps_enable = false;
 
 uint32_t t_last_connection = 0;
 uint32_t t_reset = 0;
 bool gnss_reset = false;
+uint16_t gnss_reset_count = 0;
 
 void gnssISR(void) {
-  t_local_ref = micros();
-  pps_cnt++;
-  pps_fix = true;
+  if (pps_enable){
+    t_local_ref = micros();
+    pps_fix = true;
+  }
 }
 
 
 void gnssReset(){
+  gnss_reset = true;
   digitalWrite(GNSS_RESET_PIN, LOW);
   delay(20);
   digitalWrite(GNSS_RESET_PIN, HIGH);
-  gnss_reset = true;
   t_reset = millis();
+  gnss_reset_count++;
 }
 
 
@@ -59,6 +62,9 @@ bool gnssConfig(){
   if (!myGNSS.setNavigationFrequency(GNSS_DEFAULT_SAMPLE_RATE))
     return false;
 
+  if (!myGNSS.setAutoPVT(true))
+    return false;
+
   return true;
 }
 
@@ -88,18 +94,23 @@ void gnssUpdate(){
     }
   }
 
-  if ((!gnss_reset || millis() - t_reset > GNSS_RESET_TIME) && millis() - t_last_connection > GNSS_TIMEOUT)
+  if ((!gnss_reset || millis() - t_reset > GNSS_RESET_TIME) && millis() - t_last_connection > GNSS_TIMEOUT){
+    pps_enable = false;
+    pps_fix = false;
     gnssReset();
+    return;
+  }
 
-  if (!gnss_reset && myGNSS.getPVT(1) == true){
+  if (myGNSS.getPVT() == true){
     t_last_connection = millis();
 
-    if (pps_fix){
-      newGNSSReference(t_local_ref, timeval{myGNSS.getUnixEpoch(), 0});
-      pps_fix = false;
-    }
-
     if (myGNSS.getFixType() == 3){
+      pps_enable = true;
+      if (pps_fix){
+        newGNSSReference(t_local_ref, timeval{myGNSS.getUnixEpoch(), 0});
+        pps_fix = false;
+      }
+
       gnssPackage myGnssPkg;
       myGnssPkg.t_sec = myGNSS.getUnixEpoch(myGnssPkg.t_usec);
     
@@ -119,4 +130,12 @@ uint8_t gnssGetSampleRate(){
 
 void gnssSetSampleRate(uint8_t sr){
   myGNSS.setNavigationFrequency(sr);
+}
+
+bool gnssGetResetFlag(){
+  return gnss_reset;
+}
+
+uint16_t gnssGetResetCount(){
+  return gnss_reset_count;
 }
